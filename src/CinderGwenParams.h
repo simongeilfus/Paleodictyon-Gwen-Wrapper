@@ -16,7 +16,6 @@
 #include "Gwen/Controls/ScrollControl.h"
 
 #include "CinderGwen.h"
-#include "Params/NumericStepper.h"
 #include "Params/Keyframer.h"
 #include "Params/TimelineWidget/TimelineWidget.h"
 
@@ -43,7 +42,8 @@ namespace CinderGwen {
 		void PostLayout( Gwen::Skin::Base* skin )
 		{
             //BaseClass::Layout( skin );
-			bool resized = SizeToChildren( true, true );
+			//bool resized =
+            SizeToChildren( true, true );
            // mOnLayout.Call( this );
             
             //SizeToChildren();
@@ -106,11 +106,12 @@ namespace CinderGwen {
         void	addParam( const std::string &name, ci::Anim<bool> *boolParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<float> *floatParam, float min = -1000.0f, float max = 1000.0f, float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<int32_t> *intParam, int min = -1000, int max = 1000, int step = 1, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
+        void	addParam( const std::string &name, ci::Anim<ci::Vec2f> *vectorParam, ci::Vec2f min = ci::Vec2f( -1000.0f, -1000.0f ), ci::Vec2f max = ci::Vec2f( 1000.0f, 1000.0f ), float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, bool vertical = true, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<ci::Vec3f> *vectorParam, ci::Vec3f min = ci::Vec3f( -1000.0f, -1000.0f, -1000.0f ), ci::Vec3f max = ci::Vec3f( 1000.0f, 1000.0f, 1000.0f ), float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, bool vertical = true, const std::string& group = "none", const std::string& tab = "none" );
         
         
-        void	addParam( const std::string &name, ci::Anim<ci::Color> *quatParam, const std::string &optionsStr = "", bool readOnly = false );
-        void	addParam( const std::string &name, ci::Anim<ci::ColorA> *quatParam, const std::string &optionsStr = "", bool readOnly = false );
+        void	addParam( const std::string &name, ci::Anim<ci::Color> *colorParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
+        void	addParam( const std::string &name, ci::Anim<ci::ColorA> *colorParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none"  );
         void	addParam( const std::string &name, std::string *strParam, const std::string &optionsStr = "", bool readOnly = false );
         void    addParam( const std::string &name, const std::vector<std::string> &enumNames, ci::Anim<int> *param, const std::string &optionsStr = "", bool readOnly = false );
         void	addSeparator( const std::string &name = "", const std::string &optionsStr = "" );

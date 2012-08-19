@@ -31,7 +31,8 @@ namespace Gwen
 			void ColorBoxChanged( Gwen::Controls::Base* pControl );
 			void ColorSliderChanged( Gwen::Controls::Base* pControl );
 			void NumericTyped( Gwen::Controls::Base* control );
-
+            
+            
 			void UpdateControls( Gwen::Color newColor );
 			
 			Event::Caller	onColorChanged;

@@ -105,7 +105,7 @@ namespace Gwen
 						m_Render->DrawLinedRect( control->GetRenderBounds() );
 					}
 
-					Gwen::Rect rect = control->GetRenderBounds();
+					//Gwen::Rect rect = control->GetRenderBounds();
 					if ( bChecked )
 					{
 						m_Render->SetDrawColor( Color( 0, 0, 0, 255) );
@@ -509,7 +509,7 @@ namespace Gwen
 				virtual void DrawSlider( Gwen::Controls::Base* control, bool bIsHorizontal, int numNotches, int barSize)
 				{
 					Gwen::Rect rect = control->GetRenderBounds();
-					Gwen::Rect notchRect = rect;
+					//Gwen::Rect notchRect = rect;
 
 					if ( bIsHorizontal )
 					{

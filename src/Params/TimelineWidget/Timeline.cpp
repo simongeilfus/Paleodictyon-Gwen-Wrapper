@@ -95,7 +95,7 @@ namespace CinderGwen { namespace Widgets {
 
 	ci::Vec2i Timeline::getNiceNumbers( int original ){
 		int nice[11] = { 1, 2, 4, 5, 10, 20, 50, 100, 200, 500, 1000 };
-		int subs[11] = { 1, 2, 4, 5, 10, 10, 10, 10, 10, 10, 10 };
+		//int subs[11] = { 1, 2, 4, 5, 10, 10, 10, 10, 10, 10, 10 };
 		int closest = 10000;
 		int result = 0;
 		for( int i = 0 ; i < 8; i++ ){
@@ -116,7 +116,7 @@ namespace CinderGwen { namespace Widgets {
 		if( frame < mStartFrame ) frame = mStartFrame;
 		if( frame > mEndFrame ) frame = mEndFrame;
 
-		if( mTimeFormat = TimeFormat_Frames )
+		if( mTimeFormat == TimeFormat_Frames )
 			frame = (int) frame - ( (int) frame %  (int) mNumFramesPerSubdvisions );
 
 		return frame;

@@ -4,6 +4,9 @@
 #include "Gwen/Utility.h"
 #include "Gwen/Skin.h"
 
+#include "Params/NumericStepper.h"
+#include "Params/ColorPicker.h"
+
 #include "cinder/Cinder.h"
 
 namespace CinderGwen {
@@ -29,15 +32,27 @@ namespace CinderGwen {
         if( Timeline::getCurrentTimeline() ){
             if( typeName == "CheckBox" ){
                 Gwen::Controls::CheckBox* base = gwen_cast< Gwen::Controls::CheckBox >( mControl );
+                Animation::KeyFrameRef keyframe = Animation::KeyFrame::create( (int) base->IsChecked(), 0.0f );
+                Timeline::getCurrentTimeline()->addKeyframe( mLabel->GetText().c_str(), mAnimRef, keyframe );
             }
             else if( typeName == "NumericStepper" ){
                 NumericStepper* base = gwen_cast< NumericStepper >( mControl );
                 Animation::KeyFrameRef keyframe = Animation::KeyFrame::create( base->getValue(), 0.0f );
                 Timeline::getCurrentTimeline()->addKeyframe( mLabel->GetText().c_str(), mAnimRef, keyframe );
             }
-            else if( typeName == "VectorStepper" ){
-                VectorStepper* base = gwen_cast< VectorStepper >( mControl );
+            else if( typeName == "VectorStepper2f" ){
+                VectorStepper2f* base = gwen_cast< VectorStepper2f >( mControl );
                 Animation::KeyFrameRef keyframe = Animation::KeyFrame::create( base->getValue(), 0.0f );
+                Timeline::getCurrentTimeline()->addKeyframe( mLabel->GetText().c_str(), mAnimRef, keyframe );
+            }
+            else if( typeName == "VectorStepper3f" ){
+                VectorStepper3f* base = gwen_cast< VectorStepper3f >( mControl );
+                Animation::KeyFrameRef keyframe = Animation::KeyFrame::create( base->getValue(), 0.0f );
+                Timeline::getCurrentTimeline()->addKeyframe( mLabel->GetText().c_str(), mAnimRef, keyframe );
+            }
+            else if( typeName == "ColorPicker" ){
+                ColorPicker* base = gwen_cast< ColorPicker >( mControl );
+                Animation::KeyFrameRef keyframe = Animation::KeyFrame::create( toCinder( base->GetColor() ), 0.0f );
                 Timeline::getCurrentTimeline()->addKeyframe( mLabel->GetText().c_str(), mAnimRef, keyframe );
             }
         }
@@ -83,11 +98,33 @@ namespace CinderGwen {
                 base->setValue( *mAnimRef.cast<float>() );
             }
         }
-        else if( typeName == "VectorStepper" ){
-            VectorStepper* base = gwen_cast< VectorStepper >( mControl );
+        else if( typeName == "VectorStepper2f" ){
+            VectorStepper2f* base = gwen_cast< VectorStepper2f >( mControl );
+            ci::Vec2f v = *mAnimRef.cast<ci::Vec2f>();
+            if( v != base->getValue() ){
+                base->setValue( v );
+            }
+        }
+        else if( typeName == "VectorStepper3f" ){
+            VectorStepper3f* base = gwen_cast< VectorStepper3f >( mControl );
             ci::Vec3f v = *mAnimRef.cast<ci::Vec3f>();
             if( v != base->getValue() ){
                 base->setValue( v );
+            }
+        }
+        else if( typeName == "ColorPicker" ){
+            ColorPicker* base = gwen_cast< ColorPicker >( mControl );
+            if( base->useAlpha() ){
+                ci::ColorA c = *mAnimRef.cast<ci::ColorA>();
+                if( c != toCinder( base->GetColor() ) ){
+                    base->SetColor( toGwen( c ) );
+                }
+            }
+            else {
+                ci::Color c = *mAnimRef.cast<ci::Color>();
+                if( c != toCinder( base->GetColor() ) ){
+                    base->SetColor( toGwen( c ) );
+                }
             }
         }
     }
@@ -104,9 +141,17 @@ namespace CinderGwen {
             NumericStepper* base = gwen_cast< NumericStepper >( control );
             mAnimRef = base->getValue();
         }
-        else if( typeName == "VectorStepper" ){
-            VectorStepper* base = gwen_cast< VectorStepper >( control );
+        else if( typeName == "VectorStepper2f" ){
+            VectorStepper2f* base = gwen_cast< VectorStepper2f >( control );
             mAnimRef = base->getValue();
+        }
+        else if( typeName == "VectorStepper3f" ){
+            VectorStepper3f* base = gwen_cast< VectorStepper3f >( control );
+            mAnimRef = base->getValue();
+        }
+        else if( typeName == "ColorPicker" ){
+            ColorPicker* base = gwen_cast< ColorPicker >( control );
+            mAnimRef = toCinder( base->GetColor() );
         }
         
     }
@@ -208,14 +253,14 @@ namespace CinderGwen {
         
         mWindow->mLayoutDone = false;
     }
-    void Params::addParam( const std::string &name, ci::Anim<ci::Vec3f> *vectorParam, ci::Vec3f min, ci::Vec3f max, float step, int floatPrecision, int layout, float colWidth, bool vertical, const std::string& group, const std::string& tab ){
+    void Params::addParam( const std::string &name, ci::Anim<ci::Vec2f> *vectorParam, ci::Vec2f min, ci::Vec2f max, float step, int floatPrecision, int layout, float colWidth, bool vertical, const std::string& group, const std::string& tab ){
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
         param->mAnimRef = AnimRef( vectorParam );
         param->mOnLayout.Add( this, &Params::onLayout );
         
-        VectorStepper* control = new VectorStepper( param );
+        VectorStepper2f* control = new VectorStepper2f( param );
         control->onChanged.Add( param, &Param::valueChanged );
         control->SetPos( colWidth, 0.0f );
         control->setMin( min );
@@ -227,11 +272,53 @@ namespace CinderGwen {
         
         mWindow->mLayoutDone = false;
     }
-    void Params::addParam( const std::string &name, ci::Anim<ci::Color> *quatParam, const std::string &optionsStr, bool readOnly ){
+    void Params::addParam( const std::string &name, ci::Anim<ci::Vec3f> *vectorParam, ci::Vec3f min, ci::Vec3f max, float step, int floatPrecision, int layout, float colWidth, bool vertical, const std::string& group, const std::string& tab ){
+        Param* param = new Param( mControl );
+        param->Dock( layout );
+        param->setLabel( name );
+        param->mAnimRef = AnimRef( vectorParam );
+        param->mOnLayout.Add( this, &Params::onLayout );
         
+        VectorStepper3f* control = new VectorStepper3f( param );
+        control->onChanged.Add( param, &Param::valueChanged );
+        control->SetPos( colWidth, 0.0f );
+        control->setMin( min );
+        control->setMax( max );
+        control->setStep( step );
+        control->setFloatPrecision( floatPrecision );
+        if( vertical ) control->setVertical();
+        param->setControl( control );
+        
+        mWindow->mLayoutDone = false;
     }
-    void Params::addParam( const std::string &name, ci::Anim<ci::ColorA> *quatParam, const std::string &optionsStr, bool readOnly ){
+    void Params::addParam( const std::string &name, ci::Anim<ci::Color> *colorParam, int layout, float colWidth, const std::string& group, const std::string& tab ){
+        Param* param = new Param( mControl );
+        param->setLabel( name );
+        param->Dock( layout );
+        param->mAnimRef = AnimRef( colorParam );
+        param->mOnLayout.Add( this, &Params::onLayout );
         
+        ColorPicker* control = new ColorPicker( param );
+        control->onChanged.Add( param, &Param::valueChanged );
+        control->SetPos( colWidth, 0.0f );
+        param->setControl( control );
+        
+        mWindow->mLayoutDone = false;
+    }
+    void Params::addParam( const std::string &name, ci::Anim<ci::ColorA> *colorParam, int layout, float colWidth, const std::string& group, const std::string& tab ){
+        Param* param = new Param( mControl );
+        param->setLabel( name );
+        param->Dock( layout );
+        param->mAnimRef = AnimRef( colorParam );
+        param->mOnLayout.Add( this, &Params::onLayout );
+        
+        ColorPicker* control = new ColorPicker( param );
+        control->onChanged.Add( param, &Param::valueChanged );
+        control->setUseAlpha();
+        control->SetPos( colWidth, 0.0f );
+        param->setControl( control );
+        
+        mWindow->mLayoutDone = false;
     }
     void Params::addParam( const std::string &name, std::string *strParam, const std::string &optionsStr, bool readOnly ){
         

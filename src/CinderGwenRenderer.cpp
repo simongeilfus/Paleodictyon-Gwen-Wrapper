@@ -1,5 +1,3 @@
-#pragma once
-
 #include "CinderGwenRenderer.h"
 #include "GwenResources.h"
 	
@@ -231,7 +229,7 @@ namespace CinderGwen {
 			return;
 		}
 		
-		ci::Vec2f size = texFont->measureString( stext );
+		//ci::Vec2f size = texFont->measureString( stext );
 
 		Translate( pos.x, pos.y );
 		ci::gl::color( mColor );

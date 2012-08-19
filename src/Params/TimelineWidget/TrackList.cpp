@@ -249,7 +249,7 @@ namespace CinderGwen { namespace Widgets {
 			mNeedRenderUpdate = true;
 
 			for ( size_t i = 0; i < mSelection.size(); i++ ) {
-				ci::Vec2f p = mTimeline->getPosFromTime( mTrackRef->at( mSelection[i] )->mTime );					
+				//ci::Vec2f p = mTimeline->getPosFromTime( mTrackRef->at( mSelection[i] )->mTime );
 			}
 		}
 		else if( mSelection.empty() ){

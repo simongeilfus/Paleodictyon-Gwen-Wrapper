@@ -52,9 +52,10 @@ namespace CinderGwen {
         
         virtual bool OnKeyPress( int iKey, bool bPress = true ){
             //ci::app::console() << iKey << std::endl;
+            return false;
         }
         virtual bool OnKeyRelease( int iKey ){
-            
+            return false;
         }
         virtual void AcceleratePressed() {
             //ci::app::console() << "acc" << std::endl;

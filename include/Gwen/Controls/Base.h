@@ -266,7 +266,7 @@ namespace Gwen
 	
 				virtual void Redraw(){ UpdateColours(); m_bCacheTextureDirty = true; if ( m_Parent ) m_Parent->Redraw(); }
 				virtual void UpdateColours(){};
-				virtual void SetCacheToTexture() { m_bCacheToTexture = true; }
+				virtual void SetCacheToTexture( bool cache = true ) { m_bCacheToTexture = cache; }
 				virtual bool ShouldCacheToTexture() { return m_bCacheToTexture; }
 
 				virtual void SetCursor( unsigned char c ){ m_Cursor = c; }

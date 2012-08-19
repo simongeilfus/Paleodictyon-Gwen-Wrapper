@@ -193,6 +193,10 @@ namespace CinderGwen {
             SetMargin( Gwen::Margin( 0, 1, 4, 1 ) );
         }
         
+        void SetSelectAllOnFocus( bool selectAll = true ){
+            mTextBox->SetSelectAllOnFocus( selectAll );
+        }
+        
         virtual void Render( Gwen::Skin::Base* skin )
         {
         }
@@ -239,7 +243,8 @@ namespace CinderGwen {
         }
 		void Layout( Gwen::Skin::Base* skin )
 		{
-         	bool resized = SizeToChildren( true, true );
+         	//bool resized =
+            SizeToChildren( true, true );
         }
         
         Gwen::Event::Caller	onChanged;
@@ -325,22 +330,103 @@ namespace CinderGwen {
         
     };
     
-    
-    class VectorStepper : public Gwen::Controls::Base {
+    class VectorStepper2f : public Gwen::Controls::Base {
     public:
         
-        GWEN_CONTROL_INLINE( VectorStepper, Gwen::Controls::Base )
+        GWEN_CONTROL_INLINE( VectorStepper2f, Gwen::Controls::Base )
         {
             mXStepper = new NumericStepper( this );
-            mXStepper->onChanged.Add( this, &VectorStepper::OnChange );
+            mXStepper->onChanged.Add( this, &VectorStepper2f::OnChange );
             mXStepper->Dock( Gwen::Pos::Left );
             //mXStepper->SetPos( 0, 0 );
             mYStepper = new NumericStepper( this );
-            mYStepper->onChanged.Add( this, &VectorStepper::OnChange );
+            mYStepper->onChanged.Add( this, &VectorStepper2f::OnChange );
+            mYStepper->Dock( Gwen::Pos::Left );
+            //mYStepper->SetPos( 65, 0 );
+            
+            //SizeToChildren();
+            SetSize( 2 * 60, 22 );
+        }
+        
+        void setVertical( bool vertical = true ){
+            if( vertical ){
+                mXStepper->Dock( Gwen::Pos::Top );
+                mYStepper->Dock( Gwen::Pos::Top );
+                SetSize( 63, 2 * 22 );
+            }
+            else {
+                mXStepper->Dock( Gwen::Pos::Left );
+                mYStepper->Dock( Gwen::Pos::Left );
+                SetSize( 2 * 60, 22 );
+            }
+        }
+        
+        
+        void OnChange()
+        {
+            onChanged.Call( this );
+        }
+        
+        
+        void setMin( ci::Vec2f v )
+        {
+            mXStepper->setMin( v.x );
+            mYStepper->setMin( v.y );
+        }
+        
+        void setMax( ci::Vec2f v )
+        {
+            mXStepper->setMax( v.x );
+            mYStepper->setMax( v.y );
+        }
+        
+        void setValue( ci::Vec2f v )
+        {
+            mXStepper->setValue( v.x );
+            mYStepper->setValue( v.y );
+        }
+        
+        ci::Vec2f getValue(){
+            return ci::Vec2f( mXStepper->getValue(), mYStepper->getValue() );
+        }
+        void setStep( float step ){
+            mXStepper->setStep( step );
+            mYStepper->setStep( step );
+        }
+        
+        void setFloatPrecision( int precision ) {
+            mXStepper->setFloatPrecision( precision );
+            mYStepper->setFloatPrecision( precision );
+        }
+        
+        Gwen::Event::Caller onChanged;
+        
+    private:
+        void Layout( Gwen::Skin::Base* skin )
+		{
+         	//bool resized =
+            SizeToChildren( true, true );
+        }
+        
+        NumericStepper* mXStepper;
+        NumericStepper* mYStepper;
+    };
+    
+    class VectorStepper3f : public Gwen::Controls::Base {
+    public:
+        
+        GWEN_CONTROL_INLINE( VectorStepper3f, Gwen::Controls::Base )
+        {
+            mXStepper = new NumericStepper( this );
+            mXStepper->onChanged.Add( this, &VectorStepper3f::OnChange );
+            mXStepper->Dock( Gwen::Pos::Left );
+            //mXStepper->SetPos( 0, 0 );
+            mYStepper = new NumericStepper( this );
+            mYStepper->onChanged.Add( this, &VectorStepper3f::OnChange );
             mYStepper->Dock( Gwen::Pos::Left );
             //mYStepper->SetPos( 65, 0 );
             mZStepper = new NumericStepper( this );
-            mZStepper->onChanged.Add( this, &VectorStepper::OnChange );
+            mZStepper->onChanged.Add( this, &VectorStepper3f::OnChange );
             mZStepper->Dock( Gwen::Pos::Left );
             //mZStepper->SetPos( 130, 0 );
             
@@ -411,7 +497,8 @@ namespace CinderGwen {
     private:
         void Layout( Gwen::Skin::Base* skin )
 		{
-         	bool resized = SizeToChildren( true, true );
+         	//bool resized =
+            SizeToChildren( true, true );
         }
         
         NumericStepper* mXStepper;

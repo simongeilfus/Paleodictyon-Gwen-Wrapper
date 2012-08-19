@@ -20,9 +20,11 @@
 namespace CinderGwen {
 	
 	static inline Gwen::Point toGwen( const ci::Vec2f& v ){ return Gwen::Point( v.x, v.y ); }
+	static inline Gwen::Color toGwen( const ci::ColorA& c ){ return Gwen::Color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 ); }
 	static inline Gwen::Rect toGwen( const ci::Rectf& r ){ return Gwen::Rect( r.x1, r.y1, r.getWidth(), r.getHeight() ); }
-
+    
 	static inline ci::Vec2f toCinder( const Gwen::Point& v ){ return ci::Vec2f( v.x, v.y ); }
+	static inline ci::ColorA toCinder( const Gwen::Color& c ){ return ci::ColorA( (float) c.r / 255.0f, (float) c.g / 255.0f, (float) c.b / 255.0f, (float) c.a / 255.0f ); }
 	static inline ci::Rectf toCinder( const Gwen::Rect& r ){ return ci::Rectf( r.x, r.y, r.x + r.w, r.y + r.h ); }
     
     //------------------------------------------------------------------------------------------------------------------------------------------------------
