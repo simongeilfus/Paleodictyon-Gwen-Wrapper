@@ -92,7 +92,7 @@ namespace CinderGwen {
 		return mCanvas->InputMouseMoved( event.getX(), event.getY(), delta.x, delta.y );
 	}
 	bool Canvas::mouseWheel( ci::app::MouseEvent event ){
-		return mCanvas->InputMouseWheel( event.getWheelIncrement() * 45 );
+		return mCanvas->InputMouseWheel( event.getWheelIncrement() * 95 );
 	}
 
 	int Canvas::getGwenKey( ci::app::KeyEvent event ){
@@ -159,6 +159,15 @@ namespace CinderGwen {
         return mInstance->mGwenRenderer;
     }
     
+    void CanvasSingleton::setSkin( Gwen::Skin::Base* skin )
+    {
+        check();
+       // mInstance->m
+    }
+    void CanvasSingleton::setRenderer( Gwen::Renderer::Base* renderer )
+    {
+        
+    }
     void CanvasSingleton::draw(){
         check();
         mInstance->mGwenCanvas->draw();
@@ -168,6 +177,7 @@ namespace CinderGwen {
         mGwenRenderer	= new Renderer();
         Gwen::Skin::TexturedBase* skin = new Gwen::Skin::TexturedBase( mGwenRenderer );
         skin->Init( "DefaultSkin.png" );
+        //skin->SetDefaultFont( L"Helvetica-Light", 11 );
         mGwenCanvas		= new Canvas( ci::app::getWindowWidth(), ci::app::getWindowHeight(), mGwenRenderer, skin, true );        
     }
     CanvasSingleton::~CanvasSingleton(){

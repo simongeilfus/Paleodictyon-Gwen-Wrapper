@@ -54,7 +54,7 @@ namespace Gwen
 
 				Gwen::Event::Caller	onWindowClosed;
 
-			protected:
+			//protected:
 
 				Gwen::ControlsInternal::Dragger*	m_TitleBar;
 				Gwen::Controls::Label*				m_Title;

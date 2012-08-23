@@ -326,7 +326,8 @@ namespace Gwen
 				// Childrens List
 
 				Base::List Children;
-
+            
+            virtual Base* Inner(){ return m_InnerPanel; }
 			protected:
 
 				// The logical parent
@@ -337,7 +338,6 @@ namespace Gwen
 				//  become children of that instead of us - allowing us to move
 				//  them all around by moving that panel (useful for scrolling etc)
 				Base* m_InnerPanel;
-				virtual Base* Inner(){ return m_InnerPanel; }
 
 				// This is the panel's actual parent - most likely the logical 
 				//  parent's InnerPanel (if it has one). You should rarely need this.

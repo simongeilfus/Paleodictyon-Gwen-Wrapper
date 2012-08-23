@@ -29,6 +29,7 @@ namespace CinderGwen {
     void Param::onNewKeyFrame( Gwen::Controls::Base* control ){
         std::string typeName = mControl->GetTypeName();
         
+#ifdef GWEN_TIMELINE
         if( Timeline::getCurrentTimeline() ){
             if( typeName == "CheckBox" ){
                 Gwen::Controls::CheckBox* base = gwen_cast< Gwen::Controls::CheckBox >( mControl );
@@ -56,12 +57,13 @@ namespace CinderGwen {
                 Timeline::getCurrentTimeline()->addKeyframe( mLabel->GetText().c_str(), mAnimRef, keyframe );
             }
         }
+#endif
                                                     
     }
     
     void Param::setLabel( std::string text ){
         mLabel->SetText( text );
-        mLabel->SizeToContents();
+        //mLabel->SizeToContents();
     }
     void Param::setControl( Gwen::Controls::Base* control ){
         mControl = control;
@@ -82,7 +84,7 @@ namespace CinderGwen {
     }
     
     void Param::Render( Gwen::Skin::Base* skin ){
-        BaseClass::Render( skin );
+       // BaseClass::Render( skin );
         
         std::string typeName = mControl->GetTypeName();
         
@@ -95,7 +97,10 @@ namespace CinderGwen {
         else if( typeName == "NumericStepper" ){
             NumericStepper* base = gwen_cast< NumericStepper >( mControl );
             if( *mAnimRef.cast<float>() != base->getValue() ){
-                base->setValue( *mAnimRef.cast<float>() );
+                if( base->getUseIntegers() )
+                    base->setValue( *mAnimRef.cast<int32_t>() );
+                else
+                    base->setValue( *mAnimRef.cast<float>() );
             }
         }
         else if( typeName == "VectorStepper2f" ){
@@ -106,7 +111,7 @@ namespace CinderGwen {
             }
         }
         else if( typeName == "VectorStepper3f" ){
-            VectorStepper3f* base = gwen_cast< VectorStepper3f >( mControl );
+            VectorStepper3f* base = gwen_cast< VectorStepper3f >( mControl ); 
             ci::Vec3f v = *mAnimRef.cast<ci::Vec3f>();
             if( v != base->getValue() ){
                 base->setValue( v );
@@ -139,7 +144,12 @@ namespace CinderGwen {
         }
         else if( typeName == "NumericStepper" ){
             NumericStepper* base = gwen_cast< NumericStepper >( control );
-            mAnimRef = base->getValue();
+            if( base->getUseIntegers() ){
+                mAnimRef = (int32_t) base->getValue();
+            }
+            else{
+                mAnimRef = base->getValue();
+            }
         }
         else if( typeName == "VectorStepper2f" ){
             VectorStepper2f* base = gwen_cast< VectorStepper2f >( control );
@@ -153,7 +163,6 @@ namespace CinderGwen {
             ColorPicker* base = gwen_cast< ColorPicker >( control );
             mAnimRef = toCinder( base->GetColor() );
         }
-        
     }
     //------------------------------------------------------------------------------------------------------------------------
     
@@ -235,7 +244,7 @@ namespace CinderGwen {
         
         mWindow->mLayoutDone = false;
     }
-    void Params::addParam( const std::string &name, ci::Anim<int32_t> *intParam, int min, int max, int step, int layout, float colWidth, const std::string& group, const std::string& tab ){
+    void Params::addParam( const std::string &name, ci::Anim<int> *intParam, int min, int max, int step, int layout, float colWidth, const std::string& group, const std::string& tab ){
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
@@ -326,24 +335,53 @@ namespace CinderGwen {
     void Params::addParam( const std::string &name, const std::vector<std::string> &enumNames, ci::Anim<int> *param, const std::string &optionsStr, bool readOnly ){
         
     }
-    void Params::addSeparator( const std::string &name, const std::string &optionsStr ){
-        //Gwen::Controls::Base* base = new Gwen::Controls::Base( mControl );
-        //base->Dock( Gwen::Pos::Top );
-        //base->SetSize( 10, 30 );
+    void Params::addSeparator( const std::string &name ){
+        Gwen::Controls::Base* base = new Gwen::Controls::Base( mControl );
+        base->Dock( Gwen::Pos::Top );
+        base->SetSize( 200, 30 );
+
+        //Gwen::Controls::SplitterBar* splitter = new Gwen::Controls::SplitterBar( base );
+        //splitter->SetSize( 200, 5 );
         
-        Gwen::Controls::Label* label = new Gwen::Controls::Label( mControl );
+    }
+    void Params::addText( const std::string &name ){
+        //Param* param = new Param( mControl );
+        //param->setLabel( name );
+        //param->Dock( Gwen::Pos::Top );
+        
+        Gwen::Controls::Base* labelContainer = new Gwen::Controls::Base( mControl );
+        labelContainer->Dock( Gwen::Pos::Top );
+        labelContainer->SetSize( 80, 25 );
+        
+        Gwen::Controls::Label* label = new Gwen::Controls::Label( labelContainer );
         label->Dock( Gwen::Pos::Top );
         label->SetSize( 80, 15 );
         label->SetText( name );
         label->MakeColorDark();
         label->SetMargin( Gwen::Margin( 2, 2, 0, 10 ) );
         
+        //param->setControl( label );
     }
-    void Params::addText( const std::string &name, const std::string &optionsStr ){
+    void Params::addButton( const std::string &name, const std::function<void()> &callback ){
+        std::shared_ptr<std::function<void ()> > callbackPtr( new std::function<void ()>( callback ) );
+        mButtonCallbacks.push_back( callbackPtr );
         
+        Gwen::Controls::Base* buttonContainer = new Gwen::Controls::Base( mControl );
+        buttonContainer->Dock( Gwen::Pos::Top );
+        buttonContainer->SetSize( 200, 20 );
+        
+        Gwen::Controls::Button* button = new Gwen::Controls::Button( buttonContainer );
+        button->SetSize( 180, 20 );
+        button->SetText( name );
+        button->UserData.Set( "fn shared_ptr", callbackPtr );
+        button->onPress.Add( this, &Params::buttonCallback );
+        //button->SetSize( 80, 15 );
     }
-    void Params::addButton( const std::string &name, const std::function<void()> &callback, const std::string &optionsStr ){
-        
+    
+    void Params::buttonCallback( Gwen::Controls::Base* control )
+    {
+        std::shared_ptr<std::function<void ()> > callbackPtr = control->UserData.Get< std::shared_ptr<std::function<void ()> > >( "fn shared_ptr" );
+        callbackPtr->operator()();
     }
     
     Gwen::Controls::Base* Params::getControl(){
@@ -361,6 +399,110 @@ namespace CinderGwen {
     
     //------------------------------------------------------------------------------------------------------------------------
     
+    MenuEvent::MenuEvent( const std::string& name, const std::string& subname, bool checked ) : mName( name ), mSubName( subname ), mChecked( checked )
+    {
+    }
+    
+    const std::string& MenuEvent::getName()
+    {
+        return mName;
+    }
+    const std::string& MenuEvent::getSubName()
+    {
+        return mSubName;    
+    }
+    
+    bool MenuEvent::isChecked()
+    {
+        return mChecked;    
+    }
+    
+    Menu::Menu()
+    {
+        mMenuStrip = new Gwen::Controls::MenuStrip( CanvasSingleton::getCanvas() );
+    }
+    
+    void Menu::addSeparator( const std::string &menu )
+    {
+        if( !mMenus.count( menu ) ){
+            mMenus[ menu ] = mMenuStrip->AddItem( menu );
+        }
+        
+        mMenus[ menu ]->GetMenu()->AddDivider();
+    }
+    
+    void Menu::addItem( const std::string &menu, const std::string &item, std::function<void( MenuEvent )> callback, bool checkable, bool checked )
+    {
+        if( !mMenus.count( menu ) ){
+            mMenus[ menu ] = mMenuStrip->AddItem( menu );
+        }
+        
+        Gwen::Controls::MenuItem* menuItem = mMenus[ menu ]->GetMenu()->AddItem( item );
+        menuItem->SetName( item );
+        menuItem->UserData.Set( "Callback", std::shared_ptr<std::function< void( MenuEvent ) > >( new std::function< void( MenuEvent ) >( callback ) ) );
+        menuItem->SetAction( this, &Menu::select );
+        
+        if( checkable ){
+            menuItem->SetCheckable( true );
+            menuItem->SetChecked( checked );
+        }
+    }
+    
+    void Menu::select( Gwen::Controls::Base* pControl )
+    {
+        Gwen::Controls::MenuItem* pMenuItem = (Gwen::Controls::MenuItem*) pControl;
+        
+        std::shared_ptr<std::function<void ( MenuEvent )> > callbackPtr = pMenuItem->UserData.Get< std::shared_ptr<std::function<void ( MenuEvent )> > >( "Callback" );
+        callbackPtr->operator()( MenuEvent( "", pMenuItem->GetName(), pMenuItem->GetChecked() ) );
+    }
+    
+    //------------------------------------------------------------------------------------------------------------------------
+    
+    StatusBar::StatusBar()
+    {
+        mStatusBar = new Gwen::Controls::StatusBar( CanvasSingleton::getCanvas() );
+    }
+    void StatusBar::setStatus( const std::string& status )
+    {
+        mStatusBar->SetText( status );
+    }
+    
+    //------------------------------------------------------------------------------------------------------------------------
+    
+    Explorer::Explorer( const std::string &title, const ci::Vec2i &size )
+    {
+        mWindow = new ParamsWindow( CanvasSingleton::getCanvas() );
+        mWindow->SetTitle( title );
+        mWindow->SetSize( size.x, size.y );
+        mWindow->SetClosable( false );
+        
+        mListBox = new Gwen::Controls::ListBox( mWindow );
+        mListBox->Dock( Gwen::Pos::Fill );
+        mListBox->SetAllowMultiSelect( false );
+        mListBox->onRowSelected.Add( this, &Explorer::select );
+    }
+    
+    void Explorer::addItem( const std::string &name, std::function<void( const std::string& )> callback )
+    {
+        mCallbacks[ name ] = std::shared_ptr<std::function< void( const std::string& ) > >( new std::function< void( const std::string& ) >( callback ) );
+        mListBox->AddItem( name );
+    }
+    void Explorer::removeItem( const std::string & name )
+    {
+        if( mCallbacks.count( name ) ){
+            mCallbacks[ name ] = std::shared_ptr<std::function< void( const std::string& ) > >();
+            mCallbacks.erase( mCallbacks.find( name ) );
+        }
+    }
+    void Explorer::select( Gwen::Controls::Base* pControl )
+    {
+        std::string name = mListBox->GetSelectedRow()->GetText( 0 ).m_String;
+        mCallbacks[ name ]->operator()( name );
+    }
+    
+    //------------------------------------------------------------------------------------------------------------------------
+    
+#ifdef GWEN_TIMELINE
 	Timeline::Timeline(){
         mControl    = NULL;
         mTimelineWidget   = NULL;
@@ -389,8 +531,8 @@ namespace CinderGwen {
     void Timeline::addKeyframe( std::string trackName, AnimRef anim, Animation::KeyFrameRef keyframe ){
         if( mTimeline ){
             std::shared_ptr<Animation::KeyFrame> key = std::static_pointer_cast<Animation::KeyFrame>( keyframe );
-            float fl = *key->mValue.cast<float>();
-            ci::app::console() << fl << " at " << mTimelineWidget->getCurrentTime() << std::endl;
+            //float fl = *key->mValue.cast<float>();
+            //ci::app::console() << fl << " at " << mTimelineWidget->getCurrentTime() << std::endl;
             keyframe->mTime = mTimelineWidget->getCurrentTime();
         
             bool found = false;
@@ -427,4 +569,113 @@ namespace CinderGwen {
     }
     
     Timeline* Timeline::currentTimeline = NULL;
+#endif
+    
+    
+#ifdef GWEN_FLOW
+    
+    Flow::Flow( const std::string &title, const ci::Vec2i &size )
+    {
+        
+        Gwen::Controls::WindowControl* control = new Gwen::Controls::WindowControl( CanvasSingleton::getCanvas() );
+        control->SetTitle( title );
+        control->SetSize( size.x, size.y );
+        control->SetClosable( false );
+        control->m_TitleBar->SetMargin( Gwen::Margin( 0, 0, 0 ,0 ) );
+        control->SetPadding( Gwen::Padding( -5, 0, -5 ,0 ) );
+        control->SetMouseInputEnabled( true );
+        
+        mControl = control;
+        
+		mMenu = new Gwen::Controls::MenuStrip( control );
+		mMenu->Dock( Gwen::Pos::Top );
+        mMenu->SetMargin( Gwen::Margin( 0, 0, 0, 0 ) );
+        mMenu->SetPadding( Gwen::Padding( 0, 0, 0, 0 ) );
+        
+		{
+			Gwen::Controls::MenuItem* pRoot = mMenu->AddItem( L"Audio" );
+			pRoot->GetMenu()->AddItem( L"AudioInput", "" )->SetAction( this, &Flow::createNode );
+			pRoot->GetMenu()->AddItem( L"AudioTrack", "" )->SetAction( this, &Flow::createNode );
+			pRoot->GetMenu()->AddItem( L"AudioFft", "" )->SetAction( this, &Flow::createNode );
+		}
+        
+		{
+			Gwen::Controls::MenuItem* pRoot = mMenu->AddItem( L"Math" );
+			pRoot->GetMenu()->AddItem( L"Average", "" )->SetAction( this, &Flow::createNode );
+			pRoot->GetMenu()->AddItem( L"Constant", "" )->SetAction( this, &Flow::createNode );
+		}
+        
+		{
+			Gwen::Controls::MenuItem* pRoot = mMenu->AddItem( L"Constants" );
+			pRoot->GetMenu()->AddItem( L"Int", "" )->SetAction( this, &Flow::createNode );
+			pRoot->GetMenu()->AddItem( L"Float", "" )->SetAction( this, &Flow::createNode );
+			pRoot->GetMenu()->AddItem( L"Bool", "" )->SetAction( this, &Flow::createNode );
+		}
+        
+		{
+			Gwen::Controls::MenuItem* pRoot = mMenu->AddItem( L"Utils" );
+			pRoot->GetMenu()->AddItem( L"Range", "" )->SetAction( this, &Flow::createNode );
+			pRoot->GetMenu()->AddItem( L"Visualizer", "" )->SetAction( this, &Flow::createNode );
+		}
+        
+        mRenderCanvas = new RenderCanvas( control );
+        mRenderCanvas->Dock( Gwen::Pos::Fill );
+        mRenderCanvas->registerRenderFunction( this, &Flow::Render );
+        mRenderCanvas->registerMouseDownFunction( this, &Flow::mouseDown );
+        mRenderCanvas->registerMouseDragFunction( this, &Flow::mouseDrag );
+        mRenderCanvas->registerMouseUpFunction( this, &Flow::mouseUp );
+    }
+    
+    void Flow::Render()// Gwen::Skin::Base* skin )
+    {
+        mGraph.draw();
+    }
+    
+    void Flow::mouseDown( ci::app::MouseEvent event )
+    {
+        mGraph.mouseDown( event );
+    }
+    void Flow::mouseDrag( ci::app::MouseEvent event )
+    {
+        mGraph.mouseDrag( event );
+    }
+    void Flow::mouseUp( ci::app::MouseEvent event )
+    {
+        mGraph.mouseUp( event );
+    }
+    
+    void Flow::createNode( Gwen::Controls::Base* base )
+    {
+        if( base->GetValue().m_String == "AudioInput" ){
+            mGraph.addNode( AudioInputNode::createRef( ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "AudioTrack" ){
+            mGraph.addNode( AudioTrackNode::createRef( ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "AudioFft" ){
+            mGraph.addNode( AudioFftNode::createRef( ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "Average" ){
+            mGraph.addNode( AverageNode::createRef( ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "Int" ){
+            mGraph.addNode( ConstantNode::createRef( 0, ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "Float" ){
+            mGraph.addNode( ConstantNode::createRef( 0.0f, ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "Bool" ){
+            mGraph.addNode( ConstantNode::createRef( false, ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "Range" ){
+            mGraph.addNode( RangeNode::createRef( ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+        else if( base->GetValue().m_String == "Visualizer" ){
+            mGraph.addNode( VisualizerNode::createRef( ci::Vec2f( 10, 10 ), ci::Vec2f( 150, 39 ) ) );
+        }
+    }
+        
+#endif
+    
+    
 };

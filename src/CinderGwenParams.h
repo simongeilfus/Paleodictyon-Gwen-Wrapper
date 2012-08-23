@@ -17,10 +17,26 @@
 
 #include "CinderGwen.h"
 #include "Params/Keyframer.h"
-#include "Params/TimelineWidget/TimelineWidget.h"
+#include "Params/RenderCanvas.h"
+
+#define GWEN_TIMELINE
+
+#ifdef GWEN_TIMELINE
+
+    #include "Track.h"
+    #include "Params/TimelineWidget/TimelineWidget.h"
+
+#endif
+
+#define GWEN_FLOW
+
+#ifdef GWEN_FLOW
+
+    #include "Flow.h"
+
+#endif
 
 #include "AnimRef.h"
-#include "Track.h"
 
 namespace CinderGwen {
     
@@ -105,7 +121,7 @@ namespace CinderGwen {
         
         void	addParam( const std::string &name, ci::Anim<bool> *boolParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<float> *floatParam, float min = -1000.0f, float max = 1000.0f, float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
-        void	addParam( const std::string &name, ci::Anim<int32_t> *intParam, int min = -1000, int max = 1000, int step = 1, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
+        void	addParam( const std::string &name, ci::Anim<int> *intParam, int min = -1000, int max = 1000, int step = 1, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<ci::Vec2f> *vectorParam, ci::Vec2f min = ci::Vec2f( -1000.0f, -1000.0f ), ci::Vec2f max = ci::Vec2f( 1000.0f, 1000.0f ), float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, bool vertical = true, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<ci::Vec3f> *vectorParam, ci::Vec3f min = ci::Vec3f( -1000.0f, -1000.0f, -1000.0f ), ci::Vec3f max = ci::Vec3f( 1000.0f, 1000.0f, 1000.0f ), float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, bool vertical = true, const std::string& group = "none", const std::string& tab = "none" );
         
@@ -114,24 +130,88 @@ namespace CinderGwen {
         void	addParam( const std::string &name, ci::Anim<ci::ColorA> *colorParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none"  );
         void	addParam( const std::string &name, std::string *strParam, const std::string &optionsStr = "", bool readOnly = false );
         void    addParam( const std::string &name, const std::vector<std::string> &enumNames, ci::Anim<int> *param, const std::string &optionsStr = "", bool readOnly = false );
-        void	addSeparator( const std::string &name = "", const std::string &optionsStr = "" );
-        void	addText( const std::string &name = "", const std::string &optionsStr = "" );
-        void	addButton( const std::string &name, const std::function<void()> &callback, const std::string &optionsStr = "" );
+        void	addSeparator( const std::string &name = "" );
+        void	addText( const std::string &name = "" );
+        void	addButton( const std::string &name, const std::function<void()> &callback );
         
-        void	setOptions( const std::string &name = "", const std::string &optionsStr = "" );
+        void    setPosition( ci::Vec2f pos ){ mWindow->SetPos( pos.x, pos.y ); }
+        void    setVisible( bool visible ){ mControl->SetHidden( !visible ); }
+        bool    getVisible(){ return !mControl->Hidden(); }
+        
+        void    removeAll(){ mControl->Inner()->Inner()->RemoveAllChildren(); mButtonCallbacks.clear();}
         
         Gwen::Controls::Base* getControl();
         
     private:
         void onLayout( Gwen::Controls::Base* control );
+        void buttonCallback( Gwen::Controls::Base* control );
         
         
         Gwen::Controls::Base* mControl;
         ParamsWindow* mWindow;
         Gwen::Controls::ScrollControl* mScroll;
+        std::vector<std::shared_ptr<std::function<void()> > >	mButtonCallbacks;
         
     };
     
+    class MenuEvent {
+    public:
+        MenuEvent( const std::string& name, const std::string& subname, bool checked = false );
+        
+        const std::string& getName();
+        const std::string& getSubName();
+        
+        bool isChecked();
+    private:
+        
+        std::string mName;
+        std::string mSubName;
+        bool        mChecked;
+    };
+    
+    class Menu : public Gwen::Event::Handler {
+    public:
+        Menu();
+        
+        void addSeparator( const std::string &menu );
+        void addItem( const std::string &menu, const std::string &item, std::function<void( MenuEvent )> callback, bool checkable = false, bool checked = true );
+        
+    protected:
+        void select( Gwen::Controls::Base* pControl );
+        
+        Gwen::Controls::MenuStrip*                          mMenuStrip;
+        std::map< std::string, Gwen::Controls::MenuItem* >  mMenus;
+    };
+    
+    class StatusBar {
+    public:
+        StatusBar();
+        void setStatus( const std::string& status );
+    private:
+        Gwen::Controls::StatusBar* mStatusBar;
+    };
+    
+    class Explorer : public Gwen::Event::Handler {
+    public:
+        Explorer( const std::string &title, const ci::Vec2i &size );
+        
+        void    setPosition( ci::Vec2f pos ){ mWindow->SetPos( pos.x, pos.y ); }
+        void    setVisible( bool visible ){ mWindow->SetHidden( !visible ); }
+        bool    getVisible(){ return !mWindow->Hidden(); }
+        
+        void addItem( const std::string &name, std::function<void( const std::string& )> callback );
+        void removeItem( const std::string & name );
+        
+    protected:
+        void select( Gwen::Controls::Base* pControl );
+        
+        ParamsWindow* mWindow;
+        Gwen::Controls::ListBox* mListBox;
+        std::map< std::string, std::shared_ptr<std::function< void( const std::string& ) > > > mCallbacks;
+        
+    };
+    
+#ifdef GWEN_TIMELINE
     class Timeline : public Gwen::Event::Handler {
     public:
         Timeline();
@@ -145,6 +225,9 @@ namespace CinderGwen {
         
         void update();
         
+        void    setPosition( ci::Vec2f pos ){ mControl->SetPos( pos.x, pos.y ); }
+        void    setVisible( bool visible ){ mControl->SetHidden( !visible ); }
+        bool    getVisible(){ return mControl->Hidden(); }
     private:
         
         void onUpdate( Gwen::Controls::Base* control );
@@ -156,5 +239,35 @@ namespace CinderGwen {
         
         static Timeline*                    currentTimeline;
     };
-
+#endif
+    
+#ifdef GWEN_FLOW
+    class Flow : public Gwen::Event::Handler {
+    public:
+        Flow();
+        Flow( const std::string &title, const ci::Vec2i &size );
+        
+        void Render();// Gwen::Skin::Base* skin );
+        
+        void mouseDown( ci::app::MouseEvent event );
+        void mouseDrag( ci::app::MouseEvent event );
+        void mouseUp( ci::app::MouseEvent event );
+        
+        void update(){ mGraph.update(); }
+        
+        flow::Graph& getGraph(){ return mGraph; }
+        void    setPosition( ci::Vec2f pos ){ mControl->SetPos( pos.x, pos.y ); }
+        void    setVisible( bool visible ){ mControl->SetHidden( !visible ); }
+        bool    getVisible(){ return !mControl->Hidden(); }
+        
+    private:
+        
+        void createNode( Gwen::Controls::Base* base );
+        
+        flow::Graph                     mGraph;
+        RenderCanvas*                   mRenderCanvas;
+        Gwen::Controls::WindowControl*  mControl;
+        Gwen::Controls::MenuStrip*      mMenu;
+    };
+#endif
 };

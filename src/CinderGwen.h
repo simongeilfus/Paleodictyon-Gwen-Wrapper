@@ -77,6 +77,9 @@ namespace CinderGwen {
 		static Gwen::Skin::Base*        getSkin();
 		static Gwen::Renderer::Base*    getRenderer();
         
+		static void    setSkin( Gwen::Skin::Base* skin );
+		static void    setRenderer( Gwen::Renderer::Base* renderer );
+        
         static void                     draw();
         
     private:

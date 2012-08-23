@@ -27,6 +27,8 @@ namespace CinderGwen {
         GWEN_CONTROL_INLINE( NumberStepperBox, Gwen::Controls::TextBox ){
             SetText( L"0" );
             mPressed = false;
+            SetTextColor( GetSkin()->Colors.Button.Down );
+            SetTextColorOverride( GetSkin()->Colors.Button.Normal );
         }
         void OnMouseMoved( int x, int y, int deltaX, int deltaY ){
             if( mPressed ) {
@@ -229,6 +231,9 @@ namespace CinderGwen {
         
         float getValue(){
             return mValue;
+        }
+        bool getUseIntegers(){
+            return mUseIntegers;
         }
         void setUseIntegers( bool integers ){
             mUseIntegers = integers;

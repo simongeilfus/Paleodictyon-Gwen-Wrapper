@@ -60,6 +60,8 @@ namespace CinderGwen {
                 
                 NumericStepper* numeric = new NumericStepper( this );
                 numeric->SetName( "RedBox" );
+                numeric->setMin( 0 );
+                numeric->setMax( 255 );
                 numeric->SetPos( x + 15, y -1  );
                 numeric->SetSize( 26, 16 );
                 numeric->setUseIntegers( true );
@@ -79,6 +81,8 @@ namespace CinderGwen {
                 
                 NumericStepper* numeric = new NumericStepper( this );
                 numeric->SetName( "GreenBox" );
+                numeric->setMin( 0 );
+                numeric->setMax( 255 );
                 numeric->SetPos( x + 15, y -1  );
                 numeric->SetSize( 26, 16 );
                 numeric->setUseIntegers( true );
@@ -97,6 +101,8 @@ namespace CinderGwen {
                 
                 NumericStepper* numeric = new NumericStepper( this );
                 numeric->SetName( "BlueBox" );
+                numeric->setMin( 0 );
+                numeric->setMax( 255 );
                 numeric->SetPos( x + 15, y -1  );
                 numeric->SetSize( 26, 16 );
                 numeric->setUseIntegers( true );
@@ -115,6 +121,8 @@ namespace CinderGwen {
                 
                 NumericStepper* numeric = new NumericStepper( this );
                 numeric->SetName( "AlphaBox" );
+                numeric->setMin( 0 );
+                numeric->setMax( 255 );
                 numeric->SetPos( x + 15, y -1  );
                 numeric->SetSize( 26, 16 );
                 numeric->setUseIntegers( true );
@@ -145,7 +153,9 @@ namespace CinderGwen {
         void ColorBoxChanged( Gwen::Controls::Base* pControl )
         {
             onColorChanged.Call( this );
-            UpdateControls( GetColor() );
+            Gwen::Color newColor = m_LerpBox->GetSelectedColor();
+            newColor.a = m_After->GetColor().a;
+            UpdateControls( newColor );
             Invalidate();
         }
         void ColorSliderChanged( Gwen::Controls::Base* pControl )
@@ -184,7 +194,9 @@ namespace CinderGwen {
                 newColor.a = textValue;
             }
             
-            SetColor( newColor );
+            //SetColor( newColor );
+            m_After->SetColor( newColor );
+            onColorChanged.Call( this );
         }
         
         
@@ -236,7 +248,7 @@ namespace CinderGwen {
         }
         Gwen::Color GetColor(){ return m_Color; }
         void SetColor( const Gwen::Color& col ){
-            std::cout << "set color" <<  toCinder( col ) << std::endl;
+            //std::cout << "set color" <<  toCinder( col ) << std::endl;
             m_Color = col; }
         
         void OnPress(){
@@ -255,7 +267,7 @@ namespace CinderGwen {
             picker->Dock( Gwen::Pos::Fill );
             picker->SetSize( 256, 128 );
             picker->SetCacheToTexture( false );
-            std::cout << toCinder( m_Color ) << std::endl;
+            //std::cout << toCinder( m_Color ) << std::endl;
             picker->SetColor( m_Color, false, true );
             picker->onColorChanged.Add( this, &ThisClass::ColorChanged );
             
