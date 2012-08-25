@@ -28,6 +28,13 @@
 namespace CinderGwen { namespace Widgets {
 
 
+    class PlayPauseButton : public Gwen::Controls::Button {
+    public:
+		GWEN_CONTROL( PlayPauseButton, Gwen::Controls::Button );
+        
+		void Render( Gwen::Skin::Base* skin );
+    };
+    
 	class TimelineWidget : public Gwen::Controls::Base {
 
 	public:
@@ -120,6 +127,7 @@ namespace CinderGwen { namespace Widgets {
 		Timeline*		mTimeline;
 		NavigationBar*	mNavigationBar;
 		TrackList*		mTrackList;
+        PlayPauseButton*mPlayPauseButton;
 	};
 
 }}

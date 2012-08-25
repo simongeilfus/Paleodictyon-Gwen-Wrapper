@@ -17,8 +17,8 @@ namespace CinderGwen { namespace Widgets {
 
 		ci::Rectf r( ci::Vec2f( rect.x + mStart, rect.y ), ci::Vec2f( rect.x  + mEnd, rect.y + rect.h) );	
 		( (Gwen::Skin::TexturedBase*) skin )->Textures.Scroller.ButtonH_Hover.Draw( skin->GetRender(), GetRenderBounds() );
-		if ( mMouseDown ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.Scroller.ButtonH_Disabled.Draw( skin->GetRender(), CinderGwen::toGwen( r ) );
-		else ( (Gwen::Skin::TexturedBase*) skin )->Textures.Scroller.ButtonH_Down.Draw( skin->GetRender(), CinderGwen::toGwen( r ) );
+		if ( mMouseDown ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Button.Pressed.Draw( skin->GetRender(), CinderGwen::toGwen( r ) );
+		else ( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Button.Normal.Draw( skin->GetRender(), CinderGwen::toGwen( r ) );
 
 	}
 		

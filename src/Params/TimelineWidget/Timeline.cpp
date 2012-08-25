@@ -60,7 +60,7 @@ namespace CinderGwen { namespace Widgets {
 			ci::Vec2f pos = getPosFromTime( mCurrentFrame, rect );
 			ci::Vec2f pos2 = getPosFromTime( mCurrentFrame, GetRenderBounds() );
 			ci::Rectf r( pos2 - ci::Vec2f( 13, rect.h ), pos2 + ci::Vec2f( 13, 0 ) );
-			( (Gwen::Skin::TexturedBase*) skin )->Textures.Scroller.ButtonH_Disabled.Draw( skin->GetRender(), CinderGwen::toGwen( r ) );
+			( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Button.Hovered.Draw( skin->GetRender(), CinderGwen::toGwen( r ) );
 
 			ci::gl::color( ci::ColorA::black() );
 			ci::gl::drawLine( pos, pos + ci::Vec2f( 0.0f, -mFrameSubLineHeight ) );

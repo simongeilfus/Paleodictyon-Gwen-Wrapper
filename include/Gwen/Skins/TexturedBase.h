@@ -284,6 +284,17 @@ namespace Gwen
 						Texturing::Bordered Header;
 
 					} CategoryList;
+                    
+					struct  PlayPauseStop_t
+					{
+						Texturing::Bordered Normal;
+						Texturing::Bordered Pause;
+						Texturing::Bordered Start;
+						Texturing::Bordered End;
+						Texturing::Bordered Next;
+						Texturing::Bordered Previous;
+                        
+					} PlayPauseStop;
 
 					Texturing::Bordered GroupBox;
 
@@ -493,6 +504,8 @@ namespace Gwen
 					Textures.CategoryList.Header.Init			 ( &m_Texture, 320,			352, 63, 31, Margin( 8, 8, 8, 8 ) );
 
 					Textures.GroupBox.Init						 ( &m_Texture, 0,			448, 31, 31, Margin( 8, 8, 8, 8 ) );
+                    
+					Textures.PlayPauseStop.Normal.Init			( &m_Texture, 0, 216, 127, 21, Margin( 2, 2, 2, 2 ) );
 				}
 
 

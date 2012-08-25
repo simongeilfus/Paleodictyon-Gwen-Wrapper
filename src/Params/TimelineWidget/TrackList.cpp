@@ -25,6 +25,7 @@ namespace CinderGwen { namespace Widgets {
 		mMouseDown			= false;
 		
 		mTrackHeader		= new Gwen::Controls::Button( this );
+        mTrackHeader->SetTextColorOverride( Gwen::Colors::GreyLight );
 		mTrackHeader->Dock( Gwen::Pos::Left );
 		mTrackHeader->SetIsToggle( true );
 		mTrackHeader->SetPadding( Gwen::Padding( 4, 4, 4, 4 ) );
@@ -46,7 +47,7 @@ namespace CinderGwen { namespace Widgets {
 		glDisable( GL_TEXTURE_2D );
 	
 		Gwen::Rect rect = GetRenderBounds();
-		( (Gwen::Skin::TexturedBase*) skin )->Textures.Scroller.ButtonH_Hover.Draw( skin->GetRender(), rect );
+		( (Gwen::Skin::TexturedBase*) skin )->Textures.Panel.Dark.Draw( skin->GetRender(), rect );
 		
 		// Draw Selection
 		if( mMouseDown && mSelectionRect.w > 1.0f ){
@@ -66,14 +67,14 @@ namespace CinderGwen { namespace Widgets {
 
 		// Draw Track Details
 		if( mIsOpen ){
-			renderTrackDetails( skin );			
+			renderTrackDetails( skin );
 		}
 
 		// Draw Track Block
 		Animation::ValueTrack* track = static_cast<Animation::ValueTrack*>( mTrackRef.get() );
 		float x = mLeftColumnWidth + rect.x + mTimeline->getPosFromTime( track->getMinTime() ).x;
 		float w = mLeftColumnWidth + rect.x + mTimeline->getPosFromTime( track->getMaxTime() ).x - x;
-		( (Gwen::Skin::TexturedBase*) skin )->Textures.Scroller.ButtonH_Down.Draw( skin->GetRender(), Gwen::Rect( x, rect.y, w, mHeight ) );
+		( (Gwen::Skin::TexturedBase*) skin )->Textures.Panel.Normal.Draw( skin->GetRender(), Gwen::Rect( x, rect.y, w, mHeight ) );
 		
 	}
 	void TrackButton::PostLayout( Gwen::Skin::Base* skin ){
@@ -347,10 +348,10 @@ namespace CinderGwen { namespace Widgets {
 	
 	void ValueTrackButton::renderTrackDetails( Gwen::Skin::Base* skin ){
 		Gwen::Rect rect = GetRenderBounds();
-		
 		// Draw Separation
-		skin->GetRender()->SetDrawColor( skin->Colors.Tree.Normal );
-		skin->GetRender()->DrawFilledRect( Gwen::Rect( rect.x, rect.y+mHeight, rect.w, 1 ) );
+		//( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Button.Disabled.Draw( skin->GetRender(), Gwen::Rect( rect.x, rect.y+mHeight, rect.w, 1 ) );
+		skin->GetRender()->SetDrawColor( skin->Colors.Label.Dark );
+		skin->GetRender()->DrawFilledRect( Gwen::Rect( rect.x+5, rect.y+mHeight, rect.w, 1 ) );
 		//skin->GetRender()->DrawFilledRect( Gwen::Rect( rect.x, rect.y+mHeight*2, rect.w, 1 ) );
 
 		// Draw Keyframes
@@ -359,7 +360,7 @@ namespace CinderGwen { namespace Widgets {
 			ci::Vec2f pos = mTimeline->getPosFromTime( keyframe->mTime );
 			skin->GetRender()->SetDrawColor( skin->Colors.Tree.Lines );
 			skin->GetRender()->DrawFilledRect( Gwen::Rect( mLeftColumnWidth + rect.x + pos.x, rect.y, 1, mFullHeight ) );
-			( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Slider.H.Disabled.DrawCenter( skin->GetRender(), Gwen::Rect( mLeftColumnWidth + rect.x + pos.x - 4, rect.y + mHeight, 10, mHeight ) );
+			( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Slider.H.Disabled.DrawCenter( skin->GetRender(), Gwen::Rect( mLeftColumnWidth + rect.x + pos.x - 5, rect.y + mHeight, 10, mHeight ) );
 		}
 		// Draw Selected Keyframes
 		for( size_t j = 0; j < mSelection.size(); j++ ){
@@ -367,7 +368,7 @@ namespace CinderGwen { namespace Widgets {
 			ci::Vec2f pos = mTimeline->getPosFromTime( keyframe->mTime );
 			skin->GetRender()->SetDrawColor( skin->Colors.Tree.Lines );
 			skin->GetRender()->DrawFilledRect( Gwen::Rect( mLeftColumnWidth + rect.x + pos.x, rect.y, 1, mFullHeight ) );
-			( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Slider.H.Down.DrawCenter( skin->GetRender(), Gwen::Rect( mLeftColumnWidth + rect.x + pos.x - 4, rect.y + mHeight, 10, mHeight ) );
+			( (Gwen::Skin::TexturedBase*) skin )->Textures.Input.Slider.H.Down.DrawCenter( skin->GetRender(), Gwen::Rect( mLeftColumnWidth + rect.x + pos.x - 5, rect.y + mHeight, 10, mHeight ) );
 		}
 		glDisable( GL_TEXTURE_2D );
 
@@ -375,7 +376,7 @@ namespace CinderGwen { namespace Widgets {
 		Gwen::Rect tr = GetRenderBounds();
 		skin->GetRender()->Translate( tr );
 		ci::TimelineRef timelineRef = mTrackRef->getTimelineRef();
-		Animation::ValueTrack* track			= static_cast<Animation::ValueTrack*>( mTrackRef.get() );
+		Animation::ValueTrack* track= static_cast<Animation::ValueTrack*>( mTrackRef.get() );
 		float duration				= mTimeline->getEnd();
 		float inc					= duration / (float) mGraphVboSamples;
 		float min					= track->getMinValue();
@@ -396,7 +397,7 @@ namespace CinderGwen { namespace Widgets {
 					float xx = mLeftColumnWidth + tr.x + p.x;
 					float yy = tr.y+mHeight*2.0f+val;
 					iter.setPosition( ci::Vec3f( xx, yy, 0.0f ) );
-					iter.setColorRGBA( ci::ColorA::black() );
+					iter.setColorRGBA( ci::ColorA::white() );
 					++iter;
 
 					p = mTimeline->getPosFromTime( x );
@@ -406,7 +407,7 @@ namespace CinderGwen { namespace Widgets {
 					yy = tr.y+mHeight*2.0f+val;
 						
 					iter.setPosition( ci::Vec3f( xx, yy, 0.0f ) );
-					iter.setColorRGBA( ci::ColorA::black() );
+					iter.setColorRGBA( ci::ColorA::white() );
 					++iter;
 				}
 				timelineRef->stepTo( timeSave );
@@ -571,11 +572,11 @@ namespace CinderGwen { namespace Widgets {
 					++iter;
 						
 					iter.setPosition( ci::Vec3f( mLeftColumnWidth + tr.x + p1.x, tr.y+mHeight*2.0f+ci::lmap<float>( val1.a, min, max, mHeight * 2.0f - graphMargin, graphMargin ), 0.0f ) );
-					iter.setColorRGBA( ci::ColorA::black() );
+					iter.setColorRGBA( ci::ColorA::white() );
 					++iter;
 						
 					iter.setPosition( ci::Vec3f( mLeftColumnWidth + tr.x + p2.x, tr.y+mHeight*2.0f+ci::lmap<float>( val2.a, min, max, mHeight * 2.0f - graphMargin, graphMargin ), 0.0f ) );
-					iter.setColorRGBA( ci::ColorA::black() );
+					iter.setColorRGBA( ci::ColorA::white() );
 					++iter;
 				}
 				timelineRef->stepTo( timeSave );

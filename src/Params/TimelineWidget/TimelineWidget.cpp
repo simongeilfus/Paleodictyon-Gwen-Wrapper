@@ -4,6 +4,19 @@
 
 namespace CinderGwen { namespace Widgets {
 
+    
+    GWEN_CONTROL_CONSTRUCTOR( PlayPauseButton )
+    {
+        
+    }
+        
+    void PlayPauseButton::Render( Gwen::Skin::Base* skin )
+    {
+		( (Gwen::Skin::TexturedBase*) skin )->Textures.PlayPauseStop.Normal.Draw( skin->GetRender(), GetRenderBounds() );
+    }
+        
+    
+    
 	GWEN_CONTROL_CONSTRUCTOR( TimelineWidget ){
 		SetMouseInputEnabled( true );
 		SetSize( 1000, 400 );
@@ -266,7 +279,12 @@ EaseInOutAtan
 			easing->GetMenu()->AddItem( L"InOut" )->SetAction( this, &TimelineWidget::easingFunctionSelected )->SetName( "EaseInOutAtan" );
 			}
 		}
-	
+        
+        mPlayPauseButton = new PlayPauseButton( this );
+        mPlayPauseButton->SetPos( 0, 23 );
+        mPlayPauseButton->SetSize( 150, 20 );
+		//mPlayPauseButton->Dock( Gwen::Pos::Left | Gwen::Pos::Top );
+        
 		
 		// Add the first row with the timeline and the navigation bar
 		//------------------------------------------------------------------
@@ -277,7 +295,7 @@ EaseInOutAtan
 		Gwen::Controls::Base* firstRowLeftColumn = new Gwen::Controls::Base( firstRow );
 		firstRowLeftColumn->SetSize( 150, 40 );
 		firstRowLeftColumn->Dock( Gwen::Pos::Left );
-
+        
 		mTimeline = new Timeline( firstRow );
 		mTimeline->SetPos( 150, 0 );
 		mTimeline->Dock( Gwen::Pos::Top );
@@ -471,6 +489,7 @@ EaseInOutAtan
 				Animation::KeyFrame* keyframe = static_cast<Animation::KeyFrame*>( keyframeBase );
 				keyframe->mEaseFn = easingStringToFunction( type );
 				mTrackList->updateGraphVbos();
+                std::cout << "CURVE " << std::endl;
 				trackRef->refresh();
 			}
 		}
