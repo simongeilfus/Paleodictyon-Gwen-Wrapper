@@ -335,6 +335,25 @@ namespace CinderGwen {
     void Params::addParam( const std::string &name, const std::vector<std::string> &enumNames, ci::Anim<int> *param, const std::string &optionsStr, bool readOnly ){
         
     }
+    
+    void Params::addParam( const std::string &name, ci::DataSourceRef pathParam, int layout, float colWidth )
+    {
+        
+        Gwen::Controls::Base* container = new Gwen::Controls::Base( mControl );
+        container->Dock( Gwen::Pos::Top );
+        container->SetSize( 80, 25 );
+        
+        //param->setControl( label );
+        
+        Gwen::Controls::Label* label = new Gwen::Controls::Label( container );
+        label->SetSize( 80, 15 );
+        label->SetText( name );
+        
+        Gwen::Controls::FilePicker* filePicker = new Gwen::Controls::FilePicker( container );
+        filePicker->SetPos( 85, 0 );
+        //filePicker->
+    }
+    
     void Params::addSeparator( const std::string &name ){
         Gwen::Controls::Base* base = new Gwen::Controls::Base( mControl );
         base->Dock( Gwen::Pos::Top );
@@ -354,13 +373,14 @@ namespace CinderGwen {
         labelContainer->SetSize( 80, 25 );
         
         Gwen::Controls::Label* label = new Gwen::Controls::Label( labelContainer );
-        label->Dock( Gwen::Pos::Top );
         label->SetSize( 80, 15 );
         label->SetText( name );
         label->MakeColorDark();
         label->SetMargin( Gwen::Margin( 2, 2, 0, 10 ) );
         
         //param->setControl( label );
+        
+       // Gwen::Controls::FilePicker* filePicker = new Gwen::Controls::FilePicker( mControl );
     }
     void Params::addButton( const std::string &name, const std::function<void()> &callback ){
         std::shared_ptr<std::function<void ()> > callbackPtr( new std::function<void ()>( callback ) );
@@ -560,8 +580,10 @@ namespace CinderGwen {
     }
     
     void Timeline::update(){
+        if( mTimelineWidget->isPlaying() || mTimelineWidget->isScrubbing() ) {
+            mTimeline->stepTo( mTimelineWidget->getCurrentTime() );
+        }
         mTimelineWidget->update();
-        mTimeline->stepTo( mTimelineWidget->getCurrentTime() );
     }
     
     void Timeline::onUpdate( Gwen::Controls::Base* control ){

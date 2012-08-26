@@ -72,6 +72,7 @@ namespace CinderGwen {
         ~CanvasSingleton();
         
         static CanvasSingleton*         getInstance();
+        static Canvas*         getCanvasInstance();
         
 		static Gwen::Controls::Canvas*  getCanvas();
 		static Gwen::Skin::Base*        getSkin();

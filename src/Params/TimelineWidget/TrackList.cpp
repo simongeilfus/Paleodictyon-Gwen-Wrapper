@@ -4,7 +4,7 @@
 namespace CinderGwen { namespace Widgets {
 	
 	float TrackList::mTrackHeight		= 24.0f;
-	float TrackList::mLeftColumnWidth	= 150.0f;
+	float TrackList::mLeftColumnWidth	= 125.0f;
 
 	//------------------------------------------------------------------------------------------
 	

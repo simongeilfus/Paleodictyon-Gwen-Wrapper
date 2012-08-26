@@ -53,7 +53,7 @@ namespace CinderGwen { namespace Widgets {
 		bool getMouseDown(){ return mMouseDown; }
 		
 		enum {
-			TimeFormat_Frames,
+			TimeFormat_Frames = 0,
 			TimeFormat_Seconds
 		};
 		

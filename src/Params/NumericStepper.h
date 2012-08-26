@@ -366,6 +366,10 @@ namespace CinderGwen {
             }
         }
         
+        void setUseIntegers( bool integers ){
+            mXStepper->setUseIntegers( integers );
+            mYStepper->setUseIntegers( integers );
+        }
         
         void OnChange()
         {

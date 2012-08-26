@@ -145,6 +145,11 @@ namespace CinderGwen {
         return mInstance;
     }
     
+    Canvas* CanvasSingleton::getCanvasInstance()
+    {
+        check();
+        return mInstance->mGwenCanvas;
+    }
     Gwen::Controls::Canvas* CanvasSingleton::getCanvas(){
         check();
         return mInstance->mGwenCanvas->getCanvas();

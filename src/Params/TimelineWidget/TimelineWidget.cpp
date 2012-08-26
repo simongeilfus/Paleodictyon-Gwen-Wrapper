@@ -5,19 +5,49 @@
 namespace CinderGwen { namespace Widgets {
 
     
-    GWEN_CONTROL_CONSTRUCTOR( PlayPauseButton )
+    GWEN_CONTROL_CONSTRUCTOR( TimelineButton )
     {
-        
+        mDown = false;
+        mType = 2;
     }
-        
-    void PlayPauseButton::Render( Gwen::Skin::Base* skin )
+    int TimelineButton::getType()
     {
-		( (Gwen::Skin::TexturedBase*) skin )->Textures.PlayPauseStop.Normal.Draw( skin->GetRender(), GetRenderBounds() );
+        return mType;
     }
+    void TimelineButton::setType( int type )
+    {
+        mType = type;
+    }
+    void TimelineButton::Render( Gwen::Skin::Base* skin )
+    {
+        if( mType == PLAY ){
+            if( GetToggleState() ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.PlayDown.Draw( skin->GetRender(), GetRenderBounds() );
+            else ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.Play.Draw( skin->GetRender(), GetRenderBounds() );
+        }
+        else if( !mDown ){
+            if( mType == START ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.Start.Draw( skin->GetRender(), GetRenderBounds() );
+            else if( mType == PREV ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.Previous.Draw( skin->GetRender(), GetRenderBounds() );
+            else if( mType == NEXT  ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.Next.Draw( skin->GetRender(), GetRenderBounds() );
+            else if( mType == END ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.End.Draw( skin->GetRender(), GetRenderBounds() );
+        }
+        else {
+            if( mType == START ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.StartDown.Draw( skin->GetRender(), GetRenderBounds() );
+            else if( mType == PREV ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.PreviousDown.Draw( skin->GetRender(), GetRenderBounds() );
+            else if( mType == NEXT  ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.NextDown.Draw( skin->GetRender(), GetRenderBounds() );
+            else if( mType == END ) ( (Gwen::Skin::TexturedBase*) skin )->Textures.TimelineButtons.EndDown.Draw( skin->GetRender(), GetRenderBounds() );
+        }
+    }
+    
+    void TimelineButton::OnMouseClickLeft(int x, int y, bool bDown )
+    {
+        BaseClass::OnMouseClickLeft( x, y, bDown );
         
+        mDown = bDown;
+    }
     
     
-	GWEN_CONTROL_CONSTRUCTOR( TimelineWidget ){
+	GWEN_CONTROL_CONSTRUCTOR( TimelineWidget )
+    {
 		SetMouseInputEnabled( true );
 		SetSize( 1000, 400 );
 
@@ -280,24 +310,61 @@ EaseInOutAtan
 			}
 		}
         
-        mPlayPauseButton = new PlayPauseButton( this );
-        mPlayPauseButton->SetPos( 0, 23 );
-        mPlayPauseButton->SetSize( 150, 20 );
-		//mPlayPauseButton->Dock( Gwen::Pos::Left | Gwen::Pos::Top );
+        float firstColumnWidth = 125;
         
 		
 		// Add the first row with the timeline and the navigation bar
 		//------------------------------------------------------------------
 		Gwen::Controls::Base* firstRow = new Gwen::Controls::Base( this );
 		firstRow->Dock( Gwen::Pos::Top );
-		firstRow->SetSize( 150, 40 );
+		firstRow->SetSize( firstColumnWidth, 45 );
 
 		Gwen::Controls::Base* firstRowLeftColumn = new Gwen::Controls::Base( firstRow );
-		firstRowLeftColumn->SetSize( 150, 40 );
+		firstRowLeftColumn->SetSize( firstColumnWidth, 45 );
 		firstRowLeftColumn->Dock( Gwen::Pos::Left );
         
+        mTimeStepper = new VectorStepper2f( firstRowLeftColumn );
+        mTimeStepper->setUseIntegers(true);
+        mTimeStepper->Dock( Gwen::Pos::Top );
+        mTimeStepper->onChanged.Add( this, &TimelineWidget::timeStepperChanged );
+        
+        Gwen::Controls::Base* buttons = new Gwen::Controls::Base( firstRowLeftColumn );
+        buttons->Dock( Gwen::Pos::Top );
+        buttons->SetSize( 125, 21 );
+        
+        mStartButton = new TimelineButton( firstRowLeftColumn );
+        mStartButton->SetPos( 0, 21 );
+        mStartButton->SetSize( 27, 21 );
+        mStartButton->setType( TimelineButton::START );
+        mStartButton->onPress.Add( this, &TimelineWidget::handleTimelineButtons );
+        
+        mPrevButton = new TimelineButton( firstRowLeftColumn );
+        mPrevButton->SetPos( 27, 21 );
+        mPrevButton->SetSize( 23, 21 );
+        mPrevButton->setType( TimelineButton::PREV );
+        mPrevButton->onPress.Add( this, &TimelineWidget::handleTimelineButtons );
+        
+        mPlayButton = new TimelineButton( firstRowLeftColumn );
+        mPlayButton->SetPos( 50, 21 );
+        mPlayButton->SetIsToggle( true );
+        mPlayButton->SetSize( 24, 21 );
+        mPlayButton->setType( TimelineButton::PLAY );
+        mPlayButton->onPress.Add( this, &TimelineWidget::handleTimelineButtons );
+        
+        mNextButton = new TimelineButton( firstRowLeftColumn );
+        mNextButton->SetPos( 74, 21 );
+        mNextButton->SetSize( 23, 21 );
+        mNextButton->setType( TimelineButton::NEXT );
+        mNextButton->onPress.Add( this, &TimelineWidget::handleTimelineButtons );
+        
+        mEndButton = new TimelineButton( firstRowLeftColumn );
+        mEndButton->SetPos( 97, 21 );
+        mEndButton->SetSize( 30, 21 );
+        mEndButton->setType( TimelineButton::END );
+        mEndButton->onPress.Add( this, &TimelineWidget::handleTimelineButtons );
+                
 		mTimeline = new Timeline( firstRow );
-		mTimeline->SetPos( 150, 0 );
+		mTimeline->SetPos( firstColumnWidth, 0 );
 		mTimeline->Dock( Gwen::Pos::Top );
 		mTimeline->mDraggedCallback.Add( this, &TimelineWidget::onTimelineDragged );
 
@@ -314,16 +381,16 @@ EaseInOutAtan
         //new Gwen::Controls::Base( mTrackList );
 
 		setTimeFormat( TimeFormat_Seconds );
-		setPlayMode( PlayMode_Normal );
+		setPlayMode( PlayMode_Loop );
 		setTime();
 
 		mPlaying			= false;
-		mManualChangeTime	= false;
+		mScrubbing	= false;
 	}
 	
 	void TimelineWidget::update(){
-		if( mManualChangeTime ){
-			mManualChangeTime	= false;
+		if( mScrubbing ){
+			mScrubbing	= false;
 			mCurrentTime		= mManualTime;
 			if( mPlaying ) play();
 		}
@@ -344,6 +411,7 @@ EaseInOutAtan
 				stepTo( 0 );
 			}
 		}
+        mTimeStepper->setValue( ci::Vec2f( mCurrentTime, mTimeStepper->getValue().y ) );
 		mTimeline->setCurrentFrame( mCurrentTime );
 	}
 
@@ -363,7 +431,9 @@ EaseInOutAtan
 		}
 		return false;
 	}*/
+    
 
+    
 	void TimelineWidget::onNavigationBarDragged( Gwen::Controls::Base* control ){
 		NavigationBar* nav = (NavigationBar*) control;
 		mTimeline->setStart( nav->mNormalizedStart * mTotalTime );
@@ -392,7 +462,8 @@ EaseInOutAtan
 		setCurrentTime( current );
 	}
 	void TimelineWidget::setTotalTime( float total ){ 
-		mTotalTime = total; 
+		mTotalTime = total;
+        mTimeStepper->setValue( ci::Vec2f( mTimeStepper->getValue().x, mTotalTime ) );
 	}
 	void TimelineWidget::setStartTime( float start ){ 
 		mStartTime = start; 
@@ -471,10 +542,54 @@ EaseInOutAtan
 	}
 
 	void TimelineWidget::stepTo( float time, bool andPlay ){
-		mManualChangeTime = true;
+		mScrubbing = true;
 		mManualTime = time;
 		if( andPlay ) mPlaying = true;
 	}
+    
+    void TimelineWidget::handleTimelineButtons( Gwen::Controls::Base* pControl )
+    {
+        TimelineButton* button = gwen_cast<TimelineButton>( pControl );
+        if( button->getType() == TimelineButton::START ){
+            mCurrentTime = 0;
+            mTimeline->setCurrentFrame( mCurrentTime );
+            mTimeStepper->setValue( ci::Vec2f( mCurrentTime, mTimeStepper->getValue().y ) );
+        }
+        else if( button->getType() == TimelineButton::NEXT ){
+            mCurrentTime+=1;
+            mTimeline->setCurrentFrame( mCurrentTime );
+            mTimeStepper->setValue( ci::Vec2f( mCurrentTime, mTimeStepper->getValue().y ) );
+        }
+        else if( button->getType() == TimelineButton::PREV ){
+            mCurrentTime-=1;
+            mTimeline->setCurrentFrame( mCurrentTime );
+            mTimeStepper->setValue( ci::Vec2f( mCurrentTime, mTimeStepper->getValue().y ) );
+        }
+        else if( button->getType() == TimelineButton::END ){
+            mCurrentTime = mTotalTime;
+            mTimeline->setCurrentFrame( mCurrentTime );
+            mTimeStepper->setValue( ci::Vec2f( mCurrentTime, mTimeStepper->getValue().y ) );
+        }
+        else if( button->getType() == TimelineButton::PLAY ){
+            mPlaying = button->GetToggleState();
+            if( mPlaying ) play();
+        }
+    }
+    void TimelineWidget::timeStepperChanged( Gwen::Controls::Base* pControl )
+    {
+		VectorStepper2f* stepper = gwen_cast<VectorStepper2f>( pControl );
+        //stepTo( stepper->getValue().x, mPlaying );
+        if( mCurrentTime != stepper->getValue().x ){
+            mCurrentTime = stepper->getValue().x;
+            mTimeline->setCurrentFrame( mCurrentTime );
+        }
+        else if( mTotalTime != stepper->getValue().y ){
+            setTotalTime( stepper->getValue().y );
+            mTimeline->setStart( mNavigationBar->mNormalizedStart * mTotalTime );
+            mTimeline->setEnd( mNavigationBar->mNormalizedEnd * mTotalTime );
+            mTrackList->updateGraphVbos();
+        }
+    }
 
 	
 	void TimelineWidget::easingFunctionSelected( Gwen::Controls::Base* pControl ){
@@ -494,7 +609,6 @@ EaseInOutAtan
 			}
 		}
 	}
-
 	
 	ci::EaseFn TimelineWidget::easingStringToFunction( std::string func ){
 		if( func == "None" ) return ci::EaseNone();

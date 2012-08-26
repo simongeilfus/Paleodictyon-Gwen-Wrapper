@@ -285,16 +285,20 @@ namespace Gwen
 
 					} CategoryList;
                     
-					struct  PlayPauseStop_t
+					struct  TimelineButtons_t
 					{
-						Texturing::Bordered Normal;
-						Texturing::Bordered Pause;
-						Texturing::Bordered Start;
-						Texturing::Bordered End;
-						Texturing::Bordered Next;
-						Texturing::Bordered Previous;
+						Texturing::Single Play;
+						Texturing::Single Start;
+						Texturing::Single End;
+						Texturing::Single Next;
+						Texturing::Single Previous;
+						Texturing::Single PlayDown;
+						Texturing::Single StartDown;
+						Texturing::Single EndDown;
+						Texturing::Single NextDown;
+						Texturing::Single PreviousDown;
                         
-					} PlayPauseStop;
+					} TimelineButtons;
 
 					Texturing::Bordered GroupBox;
 
@@ -505,7 +509,18 @@ namespace Gwen
 
 					Textures.GroupBox.Init						 ( &m_Texture, 0,			448, 31, 31, Margin( 8, 8, 8, 8 ) );
                     
-					Textures.PlayPauseStop.Normal.Init			( &m_Texture, 0, 216, 127, 21, Margin( 2, 2, 2, 2 ) );
+					//Textures.PlayPauseStop.Normal.Init			( &m_Texture, 0, 216, 127, 21, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.Start.Init			( &m_Texture, 0, 216, 27, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.Previous.Init		( &m_Texture, 27, 216, 23, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.Play.Init            ( &m_Texture, 50, 216, 24, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.Next.Init            ( &m_Texture, 74, 216, 23, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.End.Init             ( &m_Texture, 97, 216, 30, 21);//, Margin( 2, 2, 2, 2 ) );
+                    
+					Textures.TimelineButtons.StartDown.Init			( &m_Texture, 0, 239, 27, 21 );//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.PreviousDown.Init		( &m_Texture, 27, 239, 23, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.PlayDown.Init            ( &m_Texture, 50, 239, 24, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.NextDown.Init            ( &m_Texture, 74, 239, 23, 21);//, Margin( 2, 2, 2, 2 ) );
+					Textures.TimelineButtons.EndDown.Init             ( &m_Texture, 97, 239, 30, 21);//, Margin( 2, 2, 2, 2 ) );
 				}
 
 

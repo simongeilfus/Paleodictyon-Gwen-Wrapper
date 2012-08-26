@@ -130,6 +130,10 @@ namespace CinderGwen {
         void	addParam( const std::string &name, ci::Anim<ci::ColorA> *colorParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none"  );
         void	addParam( const std::string &name, std::string *strParam, const std::string &optionsStr = "", bool readOnly = false );
         void    addParam( const std::string &name, const std::vector<std::string> &enumNames, ci::Anim<int> *param, const std::string &optionsStr = "", bool readOnly = false );
+        
+        void	addParam( const std::string &name, ci::DataSourceRef pathParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f );
+        
+        
         void	addSeparator( const std::string &name = "" );
         void	addText( const std::string &name = "" );
         void	addButton( const std::string &name, const std::function<void()> &callback );
@@ -214,11 +218,19 @@ namespace CinderGwen {
 #ifdef GWEN_TIMELINE
     class Timeline : public Gwen::Event::Handler {
     public:
+        
+		enum {
+			TimeFormat_Frames = 0,
+			TimeFormat_Seconds
+		};
+        
         Timeline();
         Timeline( const std::string &title, const ci::Vec2i &size, float totalTime, ci::TimelineRef timeline );
         
         void addTrack( Animation::TrackRef track );
         void addKeyframe( std::string trackName, AnimRef anim, Animation::KeyFrameRef keyframe );
+        
+        void setTimeFormat( int format ){ mTimelineWidget->setTimeFormat( format ); }
         
         static void         setCurrentTimeline( Timeline* timeline ){ currentTimeline = timeline; }
         static Timeline*    getCurrentTimeline() { return currentTimeline; }

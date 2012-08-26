@@ -24,21 +24,33 @@
 #include "Timeline.h"
 #include "NavigationBar.h"
 #include "TrackList.h"
+#include "NumericStepper.h"
 
 namespace CinderGwen { namespace Widgets {
 
-
-    class PlayPauseButton : public Gwen::Controls::Button {
+    
+    
+    class TimelineButton : public Gwen::Controls::Button {
     public:
-		GWEN_CONTROL( PlayPauseButton, Gwen::Controls::Button );
+        enum { START, PREV, PLAY, NEXT, END };
+        GWEN_CONTROL( TimelineButton, Gwen::Controls::Button );
         
-		void Render( Gwen::Skin::Base* skin );
+        void setType( int type );
+        int getType();
+        void Render( Gwen::Skin::Base* skin );
+        
+        void OnMouseClickLeft(int x, int y, bool bDown );
+    protected:
+        
+        bool    mDown;
+        int     mType;
     };
     
 	class TimelineWidget : public Gwen::Controls::Base {
 
 	public:
-
+        
+        
 		GWEN_CONTROL( TimelineWidget, Gwen::Controls::Base );
 
 		void update();
@@ -67,6 +79,9 @@ namespace CinderGwen { namespace Widgets {
 		void play();
 		void pause();
 		void stop();
+        
+        bool isPlaying(){ return mPlaying; }
+        bool isScrubbing(){ return mScrubbing; }
 
 		void stepTo( float time, bool andPlay = false );
 
@@ -104,12 +119,15 @@ namespace CinderGwen { namespace Widgets {
         
         Gwen::Event::Caller onUpdate;
 
-	//protected:
+	protected:
 		void easingFunctionSelected( Gwen::Controls::Base* pControl );
 		ci::EaseFn easingStringToFunction( std::string func );
+        void timeStepperChanged( Gwen::Controls::Base* pControl );
+        void handleTimelineButtons( Gwen::Controls::Base* pControl );
+        
 
 		bool			mPlaying;
-		bool			mManualChangeTime;
+		bool			mScrubbing;
 		
 		uint32_t		mTimeFormat;
 		uint32_t		mPlayMode;
@@ -127,7 +145,12 @@ namespace CinderGwen { namespace Widgets {
 		Timeline*		mTimeline;
 		NavigationBar*	mNavigationBar;
 		TrackList*		mTrackList;
-        PlayPauseButton*mPlayPauseButton;
+        VectorStepper2f*mTimeStepper;
+        TimelineButton*         mStartButton;
+        TimelineButton*         mPrevButton;
+        TimelineButton*         mPlayButton;
+        TimelineButton*         mNextButton;
+        TimelineButton*         mEndButton;
 	};
 
 }}
