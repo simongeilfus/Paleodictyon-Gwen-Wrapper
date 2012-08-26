@@ -7,6 +7,8 @@
 #include "Params/NumericStepper.h"
 #include "Params/ColorPicker.h"
 
+#include "Inspectable.h"
+
 #include "cinder/Cinder.h"
 
 namespace CinderGwen {
@@ -28,6 +30,8 @@ namespace CinderGwen {
     
     void Param::onNewKeyFrame( Gwen::Controls::Base* control ){
         std::string typeName = mControl->GetTypeName();
+        
+//        test->
         
 #ifdef GWEN_TIMELINE
         if( Timeline::getCurrentTimeline() ){
@@ -215,7 +219,8 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
-        param->mAnimRef = AnimRef( boolParam );
+        param->mAnimRef = Inspectable::ParametersMap[ boolParam ]->mAnimRef;
+        std::cout << "ASDASD " << param->mAnimRef.getTrackRef().get() << std::endl;
         
         Gwen::Controls::CheckBox* control = new Gwen::Controls::CheckBox( param );
         control->onCheckChanged.Add( param, &Param::valueChanged );
@@ -549,6 +554,8 @@ namespace CinderGwen {
         
     }
     void Timeline::addKeyframe( std::string trackName, AnimRef anim, Animation::KeyFrameRef keyframe ){
+        if( anim.getTrackRef() ) std::cout << "oh yeah baby" << std::endl;
+        else std::cout << "too easyy " << anim.thisRef().use_count()<< " " << (int)(bool)anim.getTrackRef()  << std::endl;
         if( mTimeline ){
             std::shared_ptr<Animation::KeyFrame> key = std::static_pointer_cast<Animation::KeyFrame>( keyframe );
             //float fl = *key->mValue.cast<float>();
