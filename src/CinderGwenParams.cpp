@@ -219,9 +219,9 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
+        assert( Inspectable::ParametersMap.count( boolParam ) > 0 );
         param->mAnimRef = Inspectable::ParametersMap[ boolParam ]->mAnimRef;
-        std::cout << "ASDASD " << param->mAnimRef.getTrackRef().get() << std::endl;
-        
+        //std::cout << name << " " << *boolParam << " " << *param->mAnimRef.cast<bool>() << std::endl;
         Gwen::Controls::CheckBox* control = new Gwen::Controls::CheckBox( param );
         control->onCheckChanged.Add( param, &Param::valueChanged );
         control->SetSize( 15, 15 );
@@ -235,8 +235,11 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
-        param->mAnimRef = AnimRef( floatParam );
+        assert( Inspectable::ParametersMap.count( floatParam ) > 0 );
+        param->mAnimRef = Inspectable::ParametersMap[ floatParam ]->mAnimRef;
         param->mOnLayout.Add( this, &Params::onLayout );
+        //std::cout << name << " " << *floatParam << " " << *Inspectable::ParametersMap[ floatParam ]->mAnimRef.cast<float>() << std::endl;
+       // std::cout << name << " " << *floatParam << " " << *param->mAnimRef.cast<float>() << std::endl;
         
         NumericStepper* control = new NumericStepper( param );
         control->onChanged.Add( param, &Param::valueChanged );
@@ -253,7 +256,8 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
-        param->mAnimRef = AnimRef( intParam );
+        assert( Inspectable::ParametersMap.count( intParam ) > 0 );
+        param->mAnimRef = Inspectable::ParametersMap[ intParam ]->mAnimRef;
         param->mOnLayout.Add( this, &Params::onLayout );
         
         NumericStepper* control = new NumericStepper( param );
@@ -271,7 +275,8 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
-        param->mAnimRef = AnimRef( vectorParam );
+        assert( Inspectable::ParametersMap.count( vectorParam ) > 0 );
+        param->mAnimRef = Inspectable::ParametersMap[ vectorParam ]->mAnimRef;
         param->mOnLayout.Add( this, &Params::onLayout );
         
         VectorStepper2f* control = new VectorStepper2f( param );
@@ -290,7 +295,8 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->Dock( layout );
         param->setLabel( name );
-        param->mAnimRef = AnimRef( vectorParam );
+        assert( Inspectable::ParametersMap.count( vectorParam ) > 0 );
+        param->mAnimRef = Inspectable::ParametersMap[ vectorParam ]->mAnimRef;
         param->mOnLayout.Add( this, &Params::onLayout );
         
         VectorStepper3f* control = new VectorStepper3f( param );
@@ -309,7 +315,8 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->setLabel( name );
         param->Dock( layout );
-        param->mAnimRef = AnimRef( colorParam );
+        assert( Inspectable::ParametersMap.count( colorParam ) > 0 );
+        param->mAnimRef = Inspectable::ParametersMap[ colorParam ]->mAnimRef;
         param->mOnLayout.Add( this, &Params::onLayout );
         
         ColorPicker* control = new ColorPicker( param );
@@ -323,7 +330,8 @@ namespace CinderGwen {
         Param* param = new Param( mControl );
         param->setLabel( name );
         param->Dock( layout );
-        param->mAnimRef = AnimRef( colorParam );
+        assert( Inspectable::ParametersMap.count( colorParam ) > 0 );
+        param->mAnimRef = Inspectable::ParametersMap[ colorParam ]->mAnimRef;
         param->mOnLayout.Add( this, &Params::onLayout );
         
         ColorPicker* control = new ColorPicker( param );
@@ -554,8 +562,6 @@ namespace CinderGwen {
         
     }
     void Timeline::addKeyframe( std::string trackName, AnimRef anim, Animation::KeyFrameRef keyframe ){
-        if( anim.getTrackRef() ) std::cout << "oh yeah baby" << std::endl;
-        else std::cout << "too easyy " << anim.thisRef().use_count()<< " " << (int)(bool)anim.getTrackRef()  << std::endl;
         if( mTimeline ){
             std::shared_ptr<Animation::KeyFrame> key = std::static_pointer_cast<Animation::KeyFrame>( keyframe );
             //float fl = *key->mValue.cast<float>();
@@ -577,11 +583,17 @@ namespace CinderGwen {
                 mTimelineWidget->updateTrackList();
             }
             else {
-                Animation::TrackRef track = Animation::ValueTrack::create( anim, trackName );
-                track->push_back( keyframe );
-                track->addToTimeline( mTimeline );
-                mTrackList.push_back( track );
-                mTimelineWidget->setTrackList( &mTrackList );
+                if( anim.getTrackRef() ){
+                    Animation::TrackRef track = anim.getTrackRef();
+                    //Animation::ValueTrack::create( anim, trackName );
+                    track->push_back( keyframe );
+                    track->addToTimeline( mTimeline );
+                    mTrackList.push_back( track );
+                    mTimelineWidget->setTrackList( &mTrackList );
+                }
+                else {
+                    std::cout << "Timeline::addKeyframe: Problem getting AnimRef Track!" << std::endl;
+                }
             }
         }
     }
