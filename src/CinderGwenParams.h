@@ -3,6 +3,12 @@
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/gl.h"
 
+#include "cinder/DataSource.h"
+#include "cinder/DataTarget.h"
+#include "cinder/Vector.h"
+#include "cinder/Utilities.h"
+#include "cinder/Json.h"
+
 #include "Gwen/Gwen.h"
 #include "Gwen/Skins/Simple.h"
 #include "Gwen/Skins/TexturedBase.h"
@@ -18,6 +24,12 @@
 #include "CinderGwen.h"
 #include "Params/Keyframer.h"
 #include "Params/RenderCanvas.h"
+
+
+#include <boost/any.hpp>
+#include <vector>
+
+
 
 #define GWEN_TIMELINE
 
@@ -40,6 +52,171 @@
 
 namespace CinderGwen {
     
+    
+    //-----------------------------------------------------------------------------
+    //      Inspectable
+    //-----------------------------------------------------------------------------
+    
+    class Inspectable {
+    public:
+        
+        struct Property {
+            Property(){}
+            Property( const std::string &type, const boost::any& value ) : mValue( value ), mType( type ) {}
+            boost::any  mValue;
+            std::string mType;
+        };
+        
+        typedef std::map< std::string, Property > PropertyMap;
+        
+        struct Parameter {
+            
+            Parameter( const std::string &name, boost::any animPtr, const std::string &group = "", const PropertyMap& properties = PropertyMap() ) : mValue( animPtr ), mName( name ), mGroup( group ), mProperties( properties ), mEditable( true ), mAnimatable( true ){
+            }
+            
+            Parameter& prop( const std::string &type, const boost::any &value ){ mProperties[ type ] = Property( type, value );return *this; }
+            Parameter& min( const boost::any& value ){ return prop( "min", value ); }
+            Parameter& max( const boost::any& value ){ return prop( "max", value ); }
+            Parameter& step( const boost::any& value ){ return prop( "step", value ); }
+            
+            Parameter& editable( bool b ){ mEditable = b; return *this; }
+            Parameter& animatable( bool b ){ mAnimatable = b; return *this; }
+            
+            bool hasProperty( const std::string &type ){ return mProperties.count( type ); }
+            
+            template<typename T>
+            T getProperty( const std::string &type ) throw()
+            {
+                T val;
+                try {
+                    val = boost::any_cast< T >( mProperties[ type ].mValue );
+                }
+                catch( boost::bad_any_cast exc ){
+                    std::cout << "Casting " << mName << "." << type << " into " << typeid( T ).name() << " Failed " << std::endl;
+                }
+                return val;
+            }
+            
+            boost::any              mValue;
+            std::string             mName;
+            std::string             mGroup;
+            bool                    mEditable;
+            bool                    mAnimatable;
+            AnimRef                 mAnimRef;
+            PropertyMap             mProperties;
+        };
+        
+        typedef std::shared_ptr< Parameter > ParameterRef;
+        
+        static std::map< void*, ParameterRef > ParametersMap;
+        
+        Parameter& addParameter( const std::string &name, boost::any animPtr, const std::string &group = "", const PropertyMap& properties = PropertyMap() )
+        {
+            Inspectable::ParameterRef prop = Inspectable::ParameterRef( new Parameter( name, animPtr, group, properties ) );
+            mParameters.push_back( prop );
+            
+            if( animPtr.type() == typeid( ci::Anim<float>* ) ) setupParameter<float>( prop, name, animPtr );
+            else if( animPtr.type() == typeid( ci::Anim<int>* ) ) setupParameter<int>( prop, name, animPtr );
+            else if( animPtr.type() == typeid( ci::Anim<bool>* ) ) setupParameter<bool>( prop, name, animPtr );
+            else if( animPtr.type() == typeid( ci::Anim<ci::Vec2f>* ) ) setupParameter<ci::Vec2f>( prop, name, animPtr );
+            else if( animPtr.type() == typeid( ci::Anim<ci::Vec3f>* ) ) setupParameter<ci::Vec3f>( prop, name, animPtr );
+            else if( animPtr.type() == typeid( ci::Anim<ci::Color>* ) ) setupParameter<ci::Color>( prop, name, animPtr );
+            else if( animPtr.type() == typeid( ci::Anim<ci::ColorA>* ) ) setupParameter<ci::ColorA>( prop, name, animPtr );
+            else {
+                std::cout << "Parameter::Unsupported Type " << std::endl;
+            }
+            
+            return *prop.get();
+        }
+        
+        ParameterRef getParameter( int i ) ;
+        ParameterRef getParameter( std::string name );
+        
+        template<typename T>
+        ParameterRef getParameterValue( int i ){ return boost::any_cast<T>( getParameter( i )->mValue ); }
+        
+        template<typename T>
+        ParameterRef getParameterValue( std::string name ){ return boost::any_cast<T>( getParameter( name )->mValue ); }
+        
+        int         getNumParameters();
+        
+        void readParametersFromJson( ci::DataSourceRef source );
+        void writeParametersToJson( ci::DataTargetRef target );
+        
+        
+    protected:
+        
+        template< typename T>
+        void setupParameter( ParameterRef prop, const std::string &name, boost::any animPtr )
+        {
+            try {
+                ci::Anim<T>* ptr = boost::any_cast<ci::Anim<T>*>( animPtr );
+                prop->mAnimRef = AnimRef( ptr );
+                prop->mAnimRef.setTrackRef( Animation::ValueTrack::create( prop->mAnimRef, name ) );
+                ParametersMap[ (void*) ptr ] = prop;
+            }
+            catch( boost::bad_any_cast exc ){
+                std::cout << "Parameter::bad_any_cast" << exc.what() << std::endl;
+            }
+        }
+        
+        template< typename T>
+        void writeParameter( ci::JsonTree& jprop, ParameterRef prop, const std::string& typeName )
+        {
+            ci::Anim<T>* ptr = boost::any_cast<ci::Anim<T>*>( prop->mValue );
+            if( ptr ){
+                jprop.pushBack( ci::JsonTree( "Value", *ptr ) );
+                jprop.pushBack( ci::JsonTree( "Type", typeName ) );
+            }
+            
+            if( prop->mAnimRef.getTrackRef() ){
+                const Animation::Track& track = *prop->mAnimRef.getTrackRef().get();
+                ci::JsonTree vec = ci::JsonTree::makeArray("Track");
+                
+                for( int i = 0; i < track.size(); i++ ){
+                    ci::JsonTree key;
+                    key.pushBack( ci::JsonTree( "time", track[i]->mTime ) );
+                    key.pushBack( ci::JsonTree( "type", track[i]->mType ) );
+                    if( track[i]->mType == Animation::KeyFrame_Value ){
+                        Animation::KeyFrame* keyFrame = static_cast<Animation::KeyFrame*>( track[i].get() );
+                        key.pushBack( ci::JsonTree( "value", *keyFrame->mValue.cast<T>() ) );
+                    }
+                    vec.pushBack( key );
+                }
+                jprop.pushBack( vec );
+            }
+        }
+        
+        template< typename T >
+        void readParameter( ci::JsonTree& jprop, ParameterRef prop )
+        {
+            ci::Anim<T>* ptr = boost::any_cast<ci::Anim<T>*>( prop->mValue );
+            *ptr = jprop.getChild("Value").getValue<T>();
+            
+            ci::JsonTree track    = jprop.getChild("Track");
+            ci::JsonTree::Container keyframes = track.getChildren();
+            
+            for( ci::JsonTree::Container::iterator it = keyframes.begin(); it != keyframes.end(); ++it ){
+                ci::JsonTree key  = *it;
+                float time  = key.getChild("time").getValue<float>();
+                float value = key.getChild("value").getValue<T>();
+                
+                prop->mAnimRef.getTrackRef()->push_back( Animation::KeyFrame::create( value, time ) );
+            }
+        }
+        
+        
+        std::vector< ParameterRef > mParameters;
+    };
+    
+        
+    
+    //-----------------------------------------------------------------------------
+    //      Params
+    //-----------------------------------------------------------------------------
+    
+    class Params;
+    
     class Param : public Gwen::Controls::Base {
     public:
         
@@ -47,28 +224,12 @@ namespace CinderGwen {
         
         void setLabel( std::string text );
         void setControl( Gwen::Controls::Base* control );
-        
-        //void OnBoundsChanged(Gwen::Rect oldBounds)
-       // {
-         //   BaseClass::OnBoundsChanged( oldBounds );
-        //}
-    //private:
+    private:
         
         
 		void PostLayout( Gwen::Skin::Base* skin )
 		{
-            //BaseClass::Layout( skin );
-			//bool resized =
             SizeToChildren( true, true );
-           // mOnLayout.Call( this );
-            
-            //SizeToChildren();
-            //GetParent()->SizeToChildren();
-            //GetParent()->GetParent()->SizeToChildren();    
-            //ci::app::console() << "Param sizetochilds " <<  resized << std::endl;
-            //if( resized ){
-            //    ci::app::console() << "      " <<  GetSize().x << " " << GetSize().y << std::endl;
-            //}
 		}
         
         void Render( Gwen::Skin::Base* skin );
@@ -83,7 +244,7 @@ namespace CinderGwen {
         Gwen::Event::Caller             mOnLayout;
         
         AnimRef                         mAnimRef;
-        
+        friend class Params;
     };
     
     class ParamsWindow : public Gwen::Controls::WindowControl {
@@ -119,6 +280,9 @@ namespace CinderGwen {
         void	hide();
         bool	isVisible() const;
         
+        void    setInspectable( Inspectable* inspectable );
+        void    addInspectable( Inspectable* inspectable );
+        
         void	addParam( const std::string &name, ci::Anim<bool> *boolParam, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<float> *floatParam, float min = -1000.0f, float max = 1000.0f, float step = 0.1f, int floatPrecision = 3, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
         void	addParam( const std::string &name, ci::Anim<int> *intParam, int min = -1000, int max = 1000, int step = 1, int layout = Gwen::Pos::Top, float colWidth = 120.0f, const std::string& group = "none", const std::string& tab = "none" );
@@ -147,16 +311,38 @@ namespace CinderGwen {
         Gwen::Controls::Base* getControl();
         
     private:
+        
+        template<typename T>
+        void addInspectableParam( Inspectable::ParameterRef param ){
+            try {
+                ci::Anim<T>* anim = param->mAnimRef.cast<T>();
+                if( param->hasProperty( "min" ) && param->hasProperty( "max" ) && param->hasProperty( "step" ) )
+                    addParam( param->mName, anim, param->getProperty<T>( "min" ), param->getProperty<T>( "max" ), param->getProperty<float>( "step" ) );
+                else if( param->hasProperty( "min" ) && param->hasProperty( "max" ) )
+                    addParam( param->mName, anim, param->getProperty<T>( "min" ), param->getProperty<T>( "max" ) );
+                else if( param->hasProperty( "min" ) )
+                    addParam( param->mName, anim, param->getProperty<T>( "min" ) );
+                else
+                    addParam( param->mName, anim );
+            }
+            catch( boost::bad_any_cast exc ){
+                std::cout << "addInspectableParam: " << exc.what() << std::endl;
+            }
+        }
+        
         void onLayout( Gwen::Controls::Base* control );
         void buttonCallback( Gwen::Controls::Base* control );
         
         
         Gwen::Controls::Base* mControl;
         ParamsWindow* mWindow;
-        Gwen::Controls::ScrollControl* mScroll;
         std::vector<std::shared_ptr<std::function<void()> > >	mButtonCallbacks;
         
     };
+    
+    //-----------------------------------------------------------------------------
+    //      Menu
+    //-----------------------------------------------------------------------------
     
     class MenuEvent {
     public:
@@ -215,6 +401,11 @@ namespace CinderGwen {
         
     };
     
+    
+    //-----------------------------------------------------------------------------
+    //      Timeline
+    //-----------------------------------------------------------------------------
+    
 #ifdef GWEN_TIMELINE
     class Timeline : public Gwen::Event::Handler {
     public:
@@ -226,6 +417,9 @@ namespace CinderGwen {
         
         Timeline();
         Timeline( const std::string &title, const ci::Vec2i &size, float totalTime, ci::TimelineRef timeline );
+        
+        void setInspectable( Inspectable* inspectable );
+        void addInspectable( Inspectable* inspectable );
         
         void addTrack( Animation::TrackRef track );
         void addKeyframe( std::string trackName, AnimRef anim, Animation::KeyFrameRef keyframe );
@@ -252,6 +446,11 @@ namespace CinderGwen {
         static Timeline*                    currentTimeline;
     };
 #endif
+    
+    
+    //-----------------------------------------------------------------------------
+    //      FlowGraph
+    //-----------------------------------------------------------------------------
     
 #ifdef GWEN_FLOW
     class Flow : public Gwen::Event::Handler {
@@ -282,4 +481,275 @@ namespace CinderGwen {
         Gwen::Controls::MenuStrip*      mMenu;
     };
 #endif
+    
+    
+    
+    //--------------------------------------------------------------------------------------------------------------------------------
+    
+    
+    
+    //-----------------------------------------------------------------------------
+    //      Inspectable Template Specialization
+    //-----------------------------------------------------------------------------
+    
+    template<>
+    inline void Inspectable::writeParameter<ci::Vec2f>( ci::JsonTree& jprop, ParameterRef prop, const std::string& typeName )
+    {
+        ci::Anim<ci::Vec2f>* ptr = boost::any_cast<ci::Anim<ci::Vec2f>*>( prop->mValue );
+        if( ptr ){
+            ci::JsonTree vec = ci::JsonTree::makeArray("Value");
+            vec.pushBack( ci::JsonTree( "x", ((ci::Vec2f)*ptr).x ) );
+            vec.pushBack( ci::JsonTree( "y", ((ci::Vec2f)*ptr).y ) );
+            jprop.pushBack( vec );
+            jprop.pushBack( ci::JsonTree( "Type", typeName ) );
+        }
+        if( prop->mAnimRef.getTrackRef() ){
+            const Animation::Track& track = *prop->mAnimRef.getTrackRef().get();
+            ci::JsonTree vec = ci::JsonTree::makeArray("Track");
+            
+            for( int i = 0; i < track.size(); i++ ){
+                ci::JsonTree key;
+                key.pushBack( ci::JsonTree( "time", track[i]->mTime ) );
+                key.pushBack( ci::JsonTree( "type", track[i]->mType ) );
+                if( track[i]->mType == Animation::KeyFrame_Value ){
+                    Animation::KeyFrame* keyFrame = static_cast<Animation::KeyFrame*>( track[i].get() );
+                    
+                    ci::JsonTree value = ci::JsonTree::makeArray("Value");
+                    value.pushBack( ci::JsonTree( "x", ((ci::Vec2f)*keyFrame->mValue.cast<ci::Vec2f>()).x ) );
+                    value.pushBack( ci::JsonTree( "y", ((ci::Vec2f)*keyFrame->mValue.cast<ci::Vec2f>()).y ) );
+                    key.pushBack( value );
+                }
+                vec.pushBack( key );
+            }
+            jprop.pushBack( vec );
+        }
+    }
+    
+    
+    template<>
+    inline void Inspectable::writeParameter<ci::Vec3f>( ci::JsonTree& jprop, ParameterRef prop, const std::string& typeName )
+    {
+        ci::Anim<ci::Vec3f>* ptr = boost::any_cast<ci::Anim<ci::Vec3f>*>( prop->mValue );
+        if( ptr ){
+            ci::JsonTree vec = ci::JsonTree::makeArray("Value");
+            ci::Vec3f v = *ptr;
+            vec.pushBack( ci::JsonTree( "x", v.x ) );
+            vec.pushBack( ci::JsonTree( "y", v.y ) );
+            vec.pushBack( ci::JsonTree( "z", v.z ) );
+            jprop.pushBack( vec );
+            jprop.pushBack( ci::JsonTree( "Type", typeName ) );
+        }
+        if( prop->mAnimRef.getTrackRef() ){
+            const Animation::Track& track = *prop->mAnimRef.getTrackRef().get();
+            ci::JsonTree vec = ci::JsonTree::makeArray("Track");
+            
+            for( int i = 0; i < track.size(); i++ ){
+                ci::JsonTree key;
+                key.pushBack( ci::JsonTree( "time", track[i]->mTime ) );
+                key.pushBack( ci::JsonTree( "type", track[i]->mType ) );
+                if( track[i]->mType == Animation::KeyFrame_Value ){
+                    Animation::KeyFrame* keyFrame = static_cast<Animation::KeyFrame*>( track[i].get() );
+                    
+                    ci::JsonTree value = ci::JsonTree::makeArray("Value");
+                    value.pushBack( ci::JsonTree( "x", (*keyFrame->mValue.cast<ci::Vec3f>()).value().x ) );
+                    value.pushBack( ci::JsonTree( "y", (*keyFrame->mValue.cast<ci::Vec3f>()).value().y ) );
+                    value.pushBack( ci::JsonTree( "z", (*keyFrame->mValue.cast<ci::Vec3f>()).value().z ) );
+                    key.pushBack( value );
+                }
+                vec.pushBack( key );
+            }
+            jprop.pushBack( vec );
+        }
+    }
+    
+    template<>
+    inline void Inspectable::writeParameter<ci::Color>( ci::JsonTree& jprop, ParameterRef prop, const std::string& typeName )
+    {
+        ci::Anim<ci::Color>* ptr = boost::any_cast<ci::Anim<ci::Color>*>( prop->mValue );
+        if( ptr ){
+            ci::JsonTree vec = ci::JsonTree::makeArray("Value");
+            vec.pushBack( ci::JsonTree( "r", ((ci::Color)*ptr).r ) );
+            vec.pushBack( ci::JsonTree( "g", ((ci::Color)*ptr).g ) );
+            vec.pushBack( ci::JsonTree( "b", ((ci::Color)*ptr).b ) );
+            jprop.pushBack( vec );
+            jprop.pushBack( ci::JsonTree( "Type", typeName ) );
+        }
+        if( prop->mAnimRef.getTrackRef() ){
+            const Animation::Track& track = *prop->mAnimRef.getTrackRef().get();
+            ci::JsonTree vec = ci::JsonTree::makeArray("Track");
+            
+            for( int i = 0; i < track.size(); i++ ){
+                ci::JsonTree key;
+                key.pushBack( ci::JsonTree( "time", track[i]->mTime ) );
+                key.pushBack( ci::JsonTree( "type", track[i]->mType ) );
+                if( track[i]->mType == Animation::KeyFrame_Value ){
+                    Animation::KeyFrame* keyFrame = static_cast<Animation::KeyFrame*>( track[i].get() );
+                    
+                    ci::JsonTree value = ci::JsonTree::makeArray("Value");
+                    value.pushBack( ci::JsonTree( "r", ((ci::ColorA)*keyFrame->mValue.cast<ci::Color>()).r ) );
+                    value.pushBack( ci::JsonTree( "g", ((ci::ColorA)*keyFrame->mValue.cast<ci::Color>()).g ) );
+                    value.pushBack( ci::JsonTree( "b", ((ci::ColorA)*keyFrame->mValue.cast<ci::Color>()).b ) );
+                    key.pushBack( value );
+                }
+                vec.pushBack( key );
+            }
+            jprop.pushBack( vec );
+        }
+    }
+    
+    template<>
+    inline void Inspectable::writeParameter<ci::ColorA>( ci::JsonTree& jprop, ParameterRef prop, const std::string& typeName )
+    {
+        
+        ci::Anim<ci::ColorA>* ptr = boost::any_cast<ci::Anim<ci::ColorA>*>( prop->mValue );
+        if( ptr ){
+            ci::JsonTree vec = ci::JsonTree::makeArray("Value");
+            vec.pushBack( ci::JsonTree( "r", ((ci::ColorA)*ptr).r ) );
+            vec.pushBack( ci::JsonTree( "g", ((ci::ColorA)*ptr).g ) );
+            vec.pushBack( ci::JsonTree( "b", ((ci::ColorA)*ptr).b ) );
+            vec.pushBack( ci::JsonTree( "a", ((ci::ColorA)*ptr).a ) );
+            jprop.pushBack( vec );
+            jprop.pushBack( ci::JsonTree( "Type", typeName ) );
+        }
+        if( prop->mAnimRef.getTrackRef() ){
+            const Animation::Track& track = *prop->mAnimRef.getTrackRef().get();
+            ci::JsonTree vec = ci::JsonTree::makeArray("Track");
+            
+            for( int i = 0; i < track.size(); i++ ){
+                ci::JsonTree key;
+                key.pushBack( ci::JsonTree( "time", track[i]->mTime ) );
+                key.pushBack( ci::JsonTree( "type", track[i]->mType ) );
+                if( track[i]->mType == Animation::KeyFrame_Value ){
+                    Animation::KeyFrame* keyFrame = static_cast<Animation::KeyFrame*>( track[i].get() );
+                    
+                    ci::JsonTree value = ci::JsonTree::makeArray("Value");
+                    value.pushBack( ci::JsonTree( "r", ((ci::ColorA)*keyFrame->mValue.cast<ci::ColorA>()).r ) );
+                    value.pushBack( ci::JsonTree( "g", ((ci::ColorA)*keyFrame->mValue.cast<ci::ColorA>()).g ) );
+                    value.pushBack( ci::JsonTree( "b", ((ci::ColorA)*keyFrame->mValue.cast<ci::ColorA>()).b ) );
+                    value.pushBack( ci::JsonTree( "a", ((ci::ColorA)*keyFrame->mValue.cast<ci::ColorA>()).a ) );
+                    key.pushBack( value );
+                }
+                vec.pushBack( key );
+            }
+            jprop.pushBack( vec );
+        }
+    }
+    
+    
+    template<>
+    inline void Inspectable::readParameter<ci::Vec2f>( ci::JsonTree& jprop, ParameterRef prop )
+    {
+        ci::Anim<ci::Vec2f>* ptr = boost::any_cast<ci::Anim<ci::Vec2f>*>( prop->mValue );
+        ci::Vec2f v;
+        v.x = jprop.getChild("Value").getChild("x").getValue<float>();
+        v.y = jprop.getChild("Value").getChild("y").getValue<float>();
+        *ptr = v;
+        
+        ci::JsonTree track    = jprop.getChild("Track");
+        ci::JsonTree::Container keyframes = track.getChildren();
+        
+        for( ci::JsonTree::Container::iterator it = keyframes.begin(); it != keyframes.end(); ++it ){
+            ci::JsonTree key  = *it;
+            float time  = key.getChild("time").getValue<float>();
+            float x = key.getChild("value").getChild("x").getValue<float>();
+            float y = key.getChild("value").getChild("y").getValue<float>();
+            
+            prop->mAnimRef.getTrackRef()->push_back( Animation::KeyFrame::create( ci::Vec2f( x, y ), time ) );
+        }
+    }
+    template<>
+    inline void Inspectable::readParameter<ci::Vec3f>( ci::JsonTree& jprop, ParameterRef prop )
+    {
+        ci::Anim<ci::Vec3f>* ptr = boost::any_cast<ci::Anim<ci::Vec3f>*>( prop->mValue );
+        ci::Vec3f v;
+        v.x = jprop.getChild("Value").getChild("x").getValue<float>();
+        v.y = jprop.getChild("Value").getChild("y").getValue<float>();
+        v.z = jprop.getChild("Value").getChild("z").getValue<float>();
+        *ptr = v;
+        
+        ci::JsonTree track    = jprop.getChild("Track");
+        ci::JsonTree::Container keyframes = track.getChildren();
+        
+        for( ci::JsonTree::Container::iterator it = keyframes.begin(); it != keyframes.end(); ++it ){
+            ci::JsonTree key  = *it;
+            float time  = key.getChild("time").getValue<float>();
+            float x = key.getChild("value").getChild("x").getValue<float>();
+            float y = key.getChild("value").getChild("y").getValue<float>();
+            float z = key.getChild("value").getChild("z").getValue<float>();
+            
+            prop->mAnimRef.getTrackRef()->push_back( Animation::KeyFrame::create( ci::Vec3f( x, y, z ), time ) );
+        }
+    }
+    template<>
+    inline void Inspectable::readParameter<ci::Color>( ci::JsonTree& jprop, ParameterRef prop )
+    {
+        ci::Anim<ci::Color>* ptr = boost::any_cast<ci::Anim<ci::Color>*>( prop->mValue );
+        ci::Color c;
+        c.r = jprop.getChild("Value").getChild("r").getValue<float>();
+        c.g = jprop.getChild("Value").getChild("g").getValue<float>();
+        c.b = jprop.getChild("Value").getChild("b").getValue<float>();
+        *ptr = c;
+        
+        ci::JsonTree track    = jprop.getChild("Track");
+        ci::JsonTree::Container keyframes = track.getChildren();
+        
+        for( ci::JsonTree::Container::iterator it = keyframes.begin(); it != keyframes.end(); ++it ){
+            ci::JsonTree key  = *it;
+            float time  = key.getChild("time").getValue<float>();
+            float r = key.getChild("value").getChild("r").getValue<float>();
+            float g = key.getChild("value").getChild("g").getValue<float>();
+            float b = key.getChild("value").getChild("b").getValue<float>();
+            
+            prop->mAnimRef.getTrackRef()->push_back( Animation::KeyFrame::create( ci::Color( r, g, b ), time ) );
+        }
+    }
+    template<>
+    inline void Inspectable::readParameter<ci::ColorA>( ci::JsonTree& jprop, ParameterRef prop )
+    {
+        ci::Anim<ci::ColorA>* ptr = boost::any_cast<ci::Anim<ci::ColorA>*>( prop->mValue );
+        ci::ColorA c;
+        c.r = jprop.getChild("Value").getChild("r").getValue<float>();
+        c.g = jprop.getChild("Value").getChild("g").getValue<float>();
+        c.b = jprop.getChild("Value").getChild("b").getValue<float>();
+        c.a = jprop.getChild("Value").getChild("a").getValue<float>();
+        *ptr = c;
+        
+        ci::JsonTree track    = jprop.getChild("Track");
+        ci::JsonTree::Container keyframes = track.getChildren();
+        
+        for( ci::JsonTree::Container::iterator it = keyframes.begin(); it != keyframes.end(); ++it ){
+            ci::JsonTree key  = *it;
+            float time  = key.getChild("time").getValue<float>();
+            float r = key.getChild("value").getChild("r").getValue<float>();
+            float g = key.getChild("value").getChild("g").getValue<float>();
+            float b = key.getChild("value").getChild("b").getValue<float>();
+            float a = key.getChild("value").getChild("a").getValue<float>();
+            
+            prop->mAnimRef.getTrackRef()->push_back( Animation::KeyFrame::create( ci::ColorA( r, g, b, a ), time ) );
+        }
+    }
+    
+    //---------
+    
+    template<>
+    inline void Params::addInspectableParam< bool >( Inspectable::ParameterRef param ){
+        ci::Anim<bool>* anim = param->mAnimRef.cast<bool>();
+        addParam( param->mName, anim );
+    }
+    
+    
+    template<>
+    inline void Params::addInspectableParam< ci::ColorA >( Inspectable::ParameterRef param ){
+        ci::Anim<ci::ColorA>* anim = param->mAnimRef.cast<ci::ColorA>();
+        addParam( param->mName, anim );
+    }
+    
+    template<>
+    inline void Params::addInspectableParam< ci::Color >( Inspectable::ParameterRef param ){
+        ci::Anim<ci::Color>* anim = param->mAnimRef.cast<ci::Color>();
+        addParam( param->mName, anim );
+    }
+
+    
+
 };

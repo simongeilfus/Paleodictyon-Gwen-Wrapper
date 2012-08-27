@@ -7,11 +7,128 @@
 #include "Params/NumericStepper.h"
 #include "Params/ColorPicker.h"
 
-#include "Inspectable.h"
-
 #include "cinder/Cinder.h"
 
 namespace CinderGwen {
+    
+    
+    //-----------------------------------------------------------------------------
+    //      Inspectable
+    //-----------------------------------------------------------------------------
+    
+    std::map< void*, Inspectable::ParameterRef > Inspectable::ParametersMap;
+    
+    Inspectable::ParameterRef Inspectable::getParameter( int i )
+    {
+        return mParameters[ i ];
+    }
+    Inspectable::ParameterRef Inspectable::getParameter( std::string name )
+    {
+        for( int i = 0; i < mParameters.size(); i++ ){
+            std::string current = mParameters[i]->mGroup+"."+mParameters[i]->mName;
+            if( current  == name )
+                return mParameters[ i ];
+        }
+        return Inspectable::ParameterRef();
+    }
+    int Inspectable::getNumParameters()
+    {
+        return mParameters.size();
+    }
+    
+    void Inspectable::readParametersFromJson( ci::DataSourceRef source ){
+        
+        try {
+            ci::JsonTree doc( source );
+            ci::JsonTree::Container properties = doc.getChild( "Parameters" ).getChildren();
+            
+            for( ci::JsonTree::Container::iterator it = properties.begin(); it != properties.end(); ++it ){
+                ci::JsonTree jprop  = *it;
+                std::string name    = jprop.getChild("Name").getValue<std::string>();
+                std::string group   = jprop.getChild("Group").getValue<std::string>();
+                //std::string options = jprop.getChild("Options").getValue<std::string>();
+                std::string type    = jprop.getChild("Type").getValue<std::string>();
+                
+                Inspectable::ParameterRef prop = getParameter( group+"."+name );
+                if( prop ){
+                    if( type == "Afloat" ) readParameter<float>( jprop, prop );
+                    else if( type == "Aint" ) readParameter<int>( jprop, prop );
+                    else if( type == "Abool" ) readParameter<bool>( jprop, prop );
+                    else if( type == "AVec2f" ) readParameter<ci::Vec2f>( jprop, prop );
+                    else if( type == "AVec3f" ) readParameter<ci::Vec3f>( jprop, prop );
+                    else if( type == "AColor" ) readParameter<ci::Color>( jprop, prop );
+                    else if( type == "AColorA" ) readParameter<ci::ColorA>( jprop, prop );
+                }
+            }
+        }
+        catch( ci::JsonTree::ExcChildNotFound exc ){
+            std::cout << "Inspectable::readParametersFromJson / ExcChildNotFound : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( ci::JsonTree::ExcJsonParserError exc ){
+            std::cout << "Inspectable::readParametersFromJson / ExcJsonParserError : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( ci::JsonTree::ExcNonConvertible exc ){
+            std::cout << "Inspectable::readParametersFromJson / ExcChildNotFound : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( ci::StreamExc exc ){
+            std::cout << "Inspectable::readParametersFromJson / StreamExc : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( boost::bad_any_cast exc ){
+            std::cout << "Inspectable::readParametersFromJson / bad_any_cast : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( std::exception exc ){
+            std::cout << "Inspectable::readParametersFromJson / UndefinedException : " << std::endl<< std::endl;
+        }
+        
+        
+    }
+    void Inspectable::writeParametersToJson( ci::DataTargetRef target ){
+        try{
+            
+            ci::JsonTree properties = ci::JsonTree::makeArray( "Parameters" );
+            for( int i = 0; i < getNumParameters(); i++ ){
+                Inspectable::ParameterRef prop = getParameter( i );
+                ci::JsonTree jprop;
+                jprop.pushBack( ci::JsonTree( "Name", prop->mName ) );
+                jprop.pushBack( ci::JsonTree( "Group", prop->mGroup ) );
+                
+                
+                if( prop->mValue.type() == typeid( ci::Anim<float>* ) ) writeParameter<float>( jprop, prop, "Afloat" );
+                else if( prop->mValue.type() == typeid( ci::Anim<int>* ) ) writeParameter<int>( jprop, prop, "Aint" );
+                else if( prop->mValue.type() == typeid( ci::Anim<bool>* ) ) writeParameter<bool>( jprop, prop, "Abool" );
+                else if( prop->mValue.type() == typeid( ci::Anim<ci::Vec2f>* ) ) writeParameter<ci::Vec2f>( jprop, prop, "AVec2f" );
+                else if( prop->mValue.type() == typeid( ci::Anim<ci::Vec3f>* ) ) writeParameter<ci::Vec3f>( jprop, prop, "AVec3f" );
+                else if( prop->mValue.type() == typeid( ci::Anim<ci::Color>* ) ) writeParameter<ci::Color>( jprop, prop, "AColor" );
+                else if( prop->mValue.type() == typeid( ci::Anim<ci::ColorA>* ) ) writeParameter<ci::ColorA>( jprop, prop, "AColorA" );
+                
+                properties.pushBack( jprop );
+            }
+            ci::JsonTree doc;
+            doc.pushBack( properties );
+            doc.write( target, ci::JsonTree::WriteOptions().indented( true ) );
+        }
+        
+        catch( ci::JsonTree::ExcJsonParserError exc ){
+            std::cout << "Inspectable::writeParametersToJson / ExcJsonParserError : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( ci::StreamExc exc ){
+            std::cout << "Inspectable::writeParametersToJson / StreamExc : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( boost::bad_any_cast exc ){
+            std::cout << "Inspectable::writeParametersToJson / bad_any_cast : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( std::exception exc ){
+            std::cout << "Inspectable::writeParametersToJson / UndefinedException : " << std::endl<< std::endl;
+        }
+        
+    }
+    
+    
+    
+    
+    //-----------------------------------------------------------------------------
+    //      Params
+    //-----------------------------------------------------------------------------
     
     
     
@@ -214,6 +331,50 @@ namespace CinderGwen {
         }
     }
     
+    
+    void Params::setInspectable( Inspectable* inspectable )
+    {
+        mWindow->Inner()->Inner()->RemoveAllChildren();
+        addInspectable( inspectable );
+    }
+    void Params::addInspectable( Inspectable* inspectable )
+    {
+        std::vector< std::pair< std::string, std::vector< Inspectable::ParameterRef > > > groups;
+        for( int i = 0; i < inspectable->getNumParameters(); i++ ){
+            Inspectable::ParameterRef param = inspectable->getParameter( i );
+            
+            bool found = false;
+            int j = 0;
+            for( ; j < groups.size(); j++ ){
+                if( groups[j].first == param->mGroup ){
+                    found = true;
+                    break;
+                }
+            }
+            if( !found ){
+                j = groups.size();
+                groups.push_back( std::pair<std::string, std::vector< Inspectable::ParameterRef > >( param->mGroup, std::vector< Inspectable::ParameterRef >() ) );
+            }
+            
+            groups[j].second.push_back( param );
+        }
+        
+        for( int i = 0; i < groups.size(); i++ ){
+            addText( groups[i].first );
+            for( int j = 0; j < groups[i].second.size(); j++ ){
+                Inspectable::ParameterRef param = groups[i].second[j];
+                if( param->mEditable ){
+                    if( param->mValue.type() == typeid( ci::Anim<float>* ) ) addInspectableParam<float>( param );
+                    else if( param->mValue.type() == typeid( ci::Anim<int>* ) ) addInspectableParam<int>( param );
+                    else if( param->mValue.type() == typeid( ci::Anim<bool>* ) ) addInspectableParam<bool>( param );
+                    else if( param->mValue.type() == typeid( ci::Anim<ci::Vec2f>* ) ) addInspectableParam<ci::Vec2f>( param );
+                    else if( param->mValue.type() == typeid( ci::Anim<ci::Vec3f>* ) ) addInspectableParam<ci::Vec3f>( param );
+                    else if( param->mValue.type() == typeid( ci::Anim<ci::Color>* ) ) addInspectableParam<ci::Color>( param );
+                    else if( param->mValue.type() == typeid( ci::Anim<ci::ColorA>* ) ) addInspectableParam<ci::ColorA>( param );
+                }
+            }
+        }
+    }
     
     void Params::addParam( const std::string &name, ci::Anim<bool> *boolParam, int layout, float colWidth, const std::string& group, const std::string& tab ){
         Param* param = new Param( mControl );
@@ -430,6 +591,12 @@ namespace CinderGwen {
         //ci::app::console() << "Params sizetochilds" << std::endl;
     }
     
+    
+    //-----------------------------------------------------------------------------
+    //      Menu
+    //-----------------------------------------------------------------------------
+    
+    
     //------------------------------------------------------------------------------------------------------------------------
     
     MenuEvent::MenuEvent( const std::string& name, const std::string& subname, bool checked ) : mName( name ), mSubName( subname ), mChecked( checked )
@@ -533,6 +700,13 @@ namespace CinderGwen {
         mCallbacks[ name ]->operator()( name );
     }
     
+    
+    
+    
+    //-----------------------------------------------------------------------------
+    //      Timeline
+    //-----------------------------------------------------------------------------
+    
     //------------------------------------------------------------------------------------------------------------------------
     
 #ifdef GWEN_TIMELINE
@@ -558,6 +732,22 @@ namespace CinderGwen {
         setCurrentTimeline( this );
     }
     
+    void Timeline::setInspectable( Inspectable* inspectable )
+    {
+        
+    }
+    void Timeline::addInspectable( Inspectable* inspectable )
+    {
+        for( int i = 0; i < inspectable->getNumParameters(); i++ ){
+            Inspectable::ParameterRef param = inspectable->getParameter( i );
+            Animation::TrackRef track = param->mAnimRef.getTrackRef();
+            if( track && track->size() > 0 ){
+                track->addToTimeline( mTimeline );
+                mTrackList.push_back( track );
+                mTimelineWidget->setTrackList( &mTrackList );
+            }
+        }
+    }
     void Timeline::addTrack( Animation::TrackRef track ){
         
     }
@@ -611,6 +801,12 @@ namespace CinderGwen {
     
     Timeline* Timeline::currentTimeline = NULL;
 #endif
+    
+    
+    //-----------------------------------------------------------------------------
+    //      FlowGraph
+    //-----------------------------------------------------------------------------
+    
     
     
 #ifdef GWEN_FLOW
