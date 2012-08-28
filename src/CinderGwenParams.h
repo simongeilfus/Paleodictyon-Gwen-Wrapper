@@ -35,8 +35,8 @@
 
 #ifdef GWEN_TIMELINE
 
-    #include "Track.h"
-    #include "Params/TimelineWidget/TimelineWidget.h"
+#include "Track.h"
+#include "Params/TimelineWidget/TimelineWidget.h"
 
 #endif
 
@@ -44,7 +44,7 @@
 
 #ifdef GWEN_FLOW
 
-    #include "Flow.h"
+#include "Flow.h"
 
 #endif
 
@@ -92,7 +92,7 @@ namespace CinderGwen {
                     val = boost::any_cast< T >( mProperties[ type ].mValue );
                 }
                 catch( boost::bad_any_cast exc ){
-                    std::cout << "Casting " << mName << "." << type << " into " << typeid( T ).name() << " Failed " << std::endl;
+                    //std::cout << "Casting " << mName << "." << type << " into " << typeid( T ).name() << " Failed " << std::endl;
                 }
                 return val;
             }
@@ -109,6 +109,7 @@ namespace CinderGwen {
         typedef std::shared_ptr< Parameter > ParameterRef;
         
         static std::map< void*, ParameterRef > ParametersMap;
+        static std::map< std::string, Inspectable* > InspectableMap;
         
         Parameter& addParameter( const std::string &name, boost::any animPtr, const std::string &group = "", const PropertyMap& properties = PropertyMap() )
         {
@@ -129,6 +130,9 @@ namespace CinderGwen {
             return *prop.get();
         }
         
+        void setName( const std::string &name ){ assert( mName.empty() ); InspectableMap[name] = this; mName = name; }
+        std::string getName(){ return mName; }
+        
         ParameterRef getParameter( int i ) ;
         ParameterRef getParameter( std::string name );
         
@@ -140,9 +144,13 @@ namespace CinderGwen {
         
         int         getNumParameters();
         
+        void readParametersFromJson( ci::JsonTree& source );
         void readParametersFromJson( ci::DataSourceRef source );
+        void writeParametersToJson( ci::JsonTree& target );
         void writeParametersToJson( ci::DataTargetRef target );
         
+        static void readAll( ci::DataSourceRef source );
+        static void writeAll( ci::DataTargetRef target );
         
     protected:
         
@@ -205,11 +213,11 @@ namespace CinderGwen {
             }
         }
         
-        
+        std::string                 mName;
         std::vector< ParameterRef > mParameters;
     };
     
-        
+    
     
     //-----------------------------------------------------------------------------
     //      Params
@@ -227,10 +235,10 @@ namespace CinderGwen {
     private:
         
         
-		void PostLayout( Gwen::Skin::Base* skin )
-		{
+        void PostLayout( Gwen::Skin::Base* skin )
+        {
             SizeToChildren( true, true );
-		}
+        }
         
         void Render( Gwen::Skin::Base* skin );
         
@@ -256,8 +264,8 @@ namespace CinderGwen {
             BaseClass::Invalidate();
             mLayoutDone = false;
         }
-		void PostLayout( Gwen::Skin::Base* skin )
-		{
+        void PostLayout( Gwen::Skin::Base* skin )
+        {
             if( !mLayoutDone ){
                 bool resized = SizeToChildren( true, true );
                 if(resized) {
@@ -269,7 +277,7 @@ namespace CinderGwen {
         
         bool mLayoutDone;
     };
-	
+    
     class Params : public Gwen::Event::Handler {
     public:
         Params();
@@ -279,6 +287,8 @@ namespace CinderGwen {
         void	show( bool visible = true );
         void	hide();
         bool	isVisible() const;
+        
+        void    clear();
         
         void    setInspectable( Inspectable* inspectable );
         void    addInspectable( Inspectable* inspectable );
@@ -381,6 +391,11 @@ namespace CinderGwen {
         Gwen::Controls::StatusBar* mStatusBar;
     };
     
+    //-----------------------------------------------------------------------------
+    //      Explorer
+    //-----------------------------------------------------------------------------
+    
+    
     class Explorer : public Gwen::Event::Handler {
     public:
         Explorer( const std::string &title, const ci::Vec2i &size );
@@ -393,13 +408,15 @@ namespace CinderGwen {
         void removeItem( const std::string & name );
         
     protected:
-        void select( Gwen::Controls::Base* pControl );
+        virtual void select( Gwen::Controls::Base* pControl );
         
         ParamsWindow* mWindow;
         Gwen::Controls::ListBox* mListBox;
         std::map< std::string, std::shared_ptr<std::function< void( const std::string& ) > > > mCallbacks;
         
     };
+    
+    
     
     
     //-----------------------------------------------------------------------------
@@ -410,10 +427,10 @@ namespace CinderGwen {
     class Timeline : public Gwen::Event::Handler {
     public:
         
-		enum {
-			TimeFormat_Frames = 0,
-			TimeFormat_Seconds
-		};
+        enum {
+            TimeFormat_Frames = 0,
+            TimeFormat_Seconds
+        };
         
         Timeline();
         Timeline( const std::string &title, const ci::Vec2i &size, float totalTime, ci::TimelineRef timeline );
@@ -429,11 +446,15 @@ namespace CinderGwen {
         static void         setCurrentTimeline( Timeline* timeline ){ currentTimeline = timeline; }
         static Timeline*    getCurrentTimeline() { return currentTimeline; }
         
-        void update();
+        bool update();
+        
+        bool isPlaying(){ return mTimelineWidget->isPlaying(); }
         
         void    setPosition( ci::Vec2f pos ){ mControl->SetPos( pos.x, pos.y ); }
         void    setVisible( bool visible ){ mControl->SetHidden( !visible ); }
         bool    getVisible(){ return mControl->Hidden(); }
+        
+        void togglePlay(){ mTimelineWidget->pause(); }
     private:
         
         void onUpdate( Gwen::Controls::Base* control );
@@ -446,6 +467,21 @@ namespace CinderGwen {
         static Timeline*                    currentTimeline;
     };
 #endif
+    
+    
+    class ObjectExplorer : public Explorer {
+    public:
+        ObjectExplorer( const std::string &title, const ci::Vec2i &size, Params* params = NULL, Timeline* timeline = NULL );
+        
+        void addObject( Inspectable* inspectable );
+        
+    protected:
+        virtual void select( Gwen::Controls::Base* pControl );
+        
+        Timeline*   mTimeline;
+        Params*     mParams;
+        std::map< std::string, Inspectable* > mInspectables;
+    };
     
     
     //-----------------------------------------------------------------------------
@@ -749,7 +785,7 @@ namespace CinderGwen {
         ci::Anim<ci::Color>* anim = param->mAnimRef.cast<ci::Color>();
         addParam( param->mName, anim );
     }
-
     
-
+    
+    
 };

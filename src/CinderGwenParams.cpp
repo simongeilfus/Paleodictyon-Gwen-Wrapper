@@ -17,6 +17,7 @@ namespace CinderGwen {
     //-----------------------------------------------------------------------------
     
     std::map< void*, Inspectable::ParameterRef > Inspectable::ParametersMap;
+    std::map< std::string, Inspectable* > Inspectable::InspectableMap;
     
     Inspectable::ParameterRef Inspectable::getParameter( int i )
     {
@@ -36,11 +37,11 @@ namespace CinderGwen {
         return mParameters.size();
     }
     
-    void Inspectable::readParametersFromJson( ci::DataSourceRef source ){
+    void Inspectable::readParametersFromJson( ci::JsonTree& source )
+    {
         
         try {
-            ci::JsonTree doc( source );
-            ci::JsonTree::Container properties = doc.getChild( "Parameters" ).getChildren();
+            ci::JsonTree::Container properties = source.getChild( getName() ).getChildren();
             
             for( ci::JsonTree::Container::iterator it = properties.begin(); it != properties.end(); ++it ){
                 ci::JsonTree jprop  = *it;
@@ -64,9 +65,6 @@ namespace CinderGwen {
         catch( ci::JsonTree::ExcChildNotFound exc ){
             std::cout << "Inspectable::readParametersFromJson / ExcChildNotFound : " << std::endl<< exc.what() << std::endl<< std::endl;
         }
-        catch( ci::JsonTree::ExcJsonParserError exc ){
-            std::cout << "Inspectable::readParametersFromJson / ExcJsonParserError : " << std::endl<< exc.what() << std::endl<< std::endl;
-        }
         catch( ci::JsonTree::ExcNonConvertible exc ){
             std::cout << "Inspectable::readParametersFromJson / ExcChildNotFound : " << std::endl<< exc.what() << std::endl<< std::endl;
         }
@@ -79,13 +77,27 @@ namespace CinderGwen {
         catch( std::exception exc ){
             std::cout << "Inspectable::readParametersFromJson / UndefinedException : " << std::endl<< std::endl;
         }
+    }
+    
+    void Inspectable::readParametersFromJson( ci::DataSourceRef source ){
         
+        try {
+            ci::JsonTree doc( source );
+            readParametersFromJson( doc );
+        }
+        catch( ci::JsonTree::ExcChildNotFound exc ){
+            std::cout << "Inspectable::readParametersFromJson / ExcChildNotFound : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( ci::StreamExc exc ){
+            std::cout << "Inspectable::readParametersFromJson / StreamExc : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
         
     }
-    void Inspectable::writeParametersToJson( ci::DataTargetRef target ){
+    
+    void Inspectable::writeParametersToJson( ci::JsonTree& target )
+    {
         try{
-            
-            ci::JsonTree properties = ci::JsonTree::makeArray( "Parameters" );
+            target = ci::JsonTree::makeArray( getName() );
             for( int i = 0; i < getNumParameters(); i++ ){
                 Inspectable::ParameterRef prop = getParameter( i );
                 ci::JsonTree jprop;
@@ -101,11 +113,8 @@ namespace CinderGwen {
                 else if( prop->mValue.type() == typeid( ci::Anim<ci::Color>* ) ) writeParameter<ci::Color>( jprop, prop, "AColor" );
                 else if( prop->mValue.type() == typeid( ci::Anim<ci::ColorA>* ) ) writeParameter<ci::ColorA>( jprop, prop, "AColorA" );
                 
-                properties.pushBack( jprop );
+                target.pushBack( jprop );
             }
-            ci::JsonTree doc;
-            doc.pushBack( properties );
-            doc.write( target, ci::JsonTree::WriteOptions().indented( true ) );
         }
         
         catch( ci::JsonTree::ExcJsonParserError exc ){
@@ -120,10 +129,47 @@ namespace CinderGwen {
         catch( std::exception exc ){
             std::cout << "Inspectable::writeParametersToJson / UndefinedException : " << std::endl<< std::endl;
         }
-        
+    }
+    
+    void Inspectable::writeParametersToJson( ci::DataTargetRef target ){
+        ci::JsonTree properties;
+        writeParametersToJson( properties );
+        ci::JsonTree doc;
+        doc.pushBack( properties );
+        doc.write( target, ci::JsonTree::WriteOptions().indented( true ) );
     }
     
     
+    void Inspectable::readAll( ci::DataSourceRef source )
+    {
+        
+        try {
+            ci::JsonTree doc( source );
+            
+            for( std::map< std::string, Inspectable* >::iterator it = InspectableMap.begin(); it != InspectableMap.end(); ++it ){
+                it->second->readParametersFromJson( doc );
+            }
+        }
+        catch( ci::JsonTree::ExcChildNotFound exc ){
+            std::cout << "Inspectable::readParametersFromJson / ExcChildNotFound : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+        catch( ci::StreamExc exc ){
+            std::cout << "Inspectable::readParametersFromJson / StreamExc : " << std::endl<< exc.what() << std::endl<< std::endl;
+        }
+    }
+    void Inspectable::writeAll( ci::DataTargetRef target )
+    {
+        
+        ci::JsonTree doc;
+        for( std::map< std::string, Inspectable* >::iterator it = InspectableMap.begin(); it != InspectableMap.end(); ++it ){
+            ci::JsonTree properties;
+            it->second->writeParametersToJson( properties );
+            doc.pushBack( properties );
+        }
+        
+        doc.write( target, ci::JsonTree::WriteOptions().indented( true ) );
+        
+    }
     
     
     //-----------------------------------------------------------------------------
@@ -331,10 +377,14 @@ namespace CinderGwen {
         }
     }
     
+    void Params::clear()
+    {
+        mWindow->Inner()->Inner()->RemoveAllChildren();
+    }
     
     void Params::setInspectable( Inspectable* inspectable )
     {
-        mWindow->Inner()->Inner()->RemoveAllChildren();
+        clear();
         addInspectable( inspectable );
     }
     void Params::addInspectable( Inspectable* inspectable )
@@ -360,7 +410,7 @@ namespace CinderGwen {
         }
         
         for( int i = 0; i < groups.size(); i++ ){
-            addText( groups[i].first );
+            if( !groups[i].first.empty() ) addText( groups[i].first );
             for( int j = 0; j < groups[i].second.size(); j++ ){
                 Inspectable::ParameterRef param = groups[i].second[j];
                 if( param->mEditable ){
@@ -701,6 +751,24 @@ namespace CinderGwen {
     }
     
     
+    ObjectExplorer::ObjectExplorer( const std::string &title, const ci::Vec2i &size, Params* params, Timeline* timeline ) : Explorer::Explorer( title, size ), mParams( params ), mTimeline( timeline )
+    {
+    }
+    
+    void ObjectExplorer::addObject( Inspectable* inspectable )
+    {
+        mInspectables[ inspectable->getName() ] = inspectable;
+        mListBox->AddItem( inspectable->getName() );
+    }
+    
+    void ObjectExplorer::select( Gwen::Controls::Base* pControl )
+    {
+        std::string name = mListBox->GetSelectedRow()->GetText( 0 ).m_String;
+        if( mInspectables.count( name ) ){
+            if( mParams ) mParams->setInspectable( mInspectables[ name ] );
+            if( mTimeline ) mTimeline->setInspectable( mInspectables[ name ] );
+        }
+    }
     
     
     //-----------------------------------------------------------------------------
@@ -734,7 +802,10 @@ namespace CinderGwen {
     
     void Timeline::setInspectable( Inspectable* inspectable )
     {
+        mTrackList.clear();
+        mTimelineWidget->setTrackList( &mTrackList );
         
+        addInspectable( inspectable );
     }
     void Timeline::addInspectable( Inspectable* inspectable )
     {
@@ -788,11 +859,12 @@ namespace CinderGwen {
         }
     }
     
-    void Timeline::update(){
+    bool Timeline::update(){
         if( mTimelineWidget->isPlaying() || mTimelineWidget->isScrubbing() ) {
             mTimeline->stepTo( mTimelineWidget->getCurrentTime() );
         }
         mTimelineWidget->update();
+        return mTimelineWidget->isPlaying();
     }
     
     void Timeline::onUpdate( Gwen::Controls::Base* control ){
