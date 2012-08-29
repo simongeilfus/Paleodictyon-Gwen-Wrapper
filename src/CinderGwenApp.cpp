@@ -138,32 +138,32 @@ void CinderGwenApp::privateSetupUi__()
     
     mUiStatusBar = new cigw::StatusBar();
     
+    float sidebarWidth = 220;
+    float timelineHeight = 200;
+    float objectExplorerHeight = 200;
+    
     // Params -------------------------------------------------------------------------------
     
-    float bottomRowHeight = 200;
+    mUiInspector = new cigw::Params( "Inspector", ci::Vec2i( sidebarWidth, getWindowHeight() - objectExplorerHeight - 50 ) );
+    mUiInspector->setPosition( ci::Vec2f( 5, objectExplorerHeight + 25 ) );
     
-    //DataSourceRef test;
-    
-    mUiInspector = new cigw::Params( "Inspector", ci::Vec2i( 220, getWindowHeight() - bottomRowHeight - 50 - 80 ) );
-    mUiInspector->setPosition( ci::Vec2f( 5, 105 ) );
-    
-    
-    // Flow Graph ---------------------------------------------------------------------------------
-    
-    mUiFlow = new cigw::Flow( "Flow", ci::Vec2i( 600, bottomRowHeight ) );
-    mUiFlow->setPosition( ci::Vec2f( 5, getWindowHeight() - bottomRowHeight - 25 ) );
-    mUiFlow->getGraph().read( ci::loadFile( getAppPath() / "LastState/graph.flow" ) );
-    mUiFlow->setVisible(false);
     
     // Timeline -----------------------------------------------------------------------------------
     
-    mUiTimeline = new cigw::Timeline( "Timeline", ci::Vec2i( 630, bottomRowHeight ), 90, mTimeline );
+    mUiTimeline = new cigw::Timeline( "Timeline", ci::Vec2i( MIN( getWindowWidth() - 10 - sidebarWidth, 800 ), timelineHeight ), 90, mTimeline );
     mUiTimeline->setTimeFormat( cigw::Timeline::TimeFormat_Frames );
-    mUiTimeline->setPosition( ci::Vec2f( /*605*/5, getWindowHeight() - bottomRowHeight - 25 ) );
+    mUiTimeline->setPosition( ci::Vec2f( sidebarWidth + 5, getWindowHeight() - timelineHeight - 25 ) );
+    
+    // Flow Graph ---------------------------------------------------------------------------------
+    
+    mUiFlow = new cigw::Flow( "Flow", ci::Vec2i( getWindowWidth() - 630 - 10, timelineHeight ) );
+    mUiFlow->setPosition( ci::Vec2f( sidebarWidth + 640, getWindowHeight() - timelineHeight - 25 ) );
+    mUiFlow->getGraph().read( ci::loadFile( getAppPath() / "LastState/graph.flow" ) );
+    mUiFlow->setVisible(false);
     
     // Object Explorer  ---------------------------------------------------------------------------
     
-    mUiObjectExplorer = new cigw::ObjectExplorer( "Objects", ci::Vec2i( 220, 80 ), mUiInspector, mUiTimeline );
+    mUiObjectExplorer = new cigw::ObjectExplorer( "Objects", ci::Vec2i( sidebarWidth, objectExplorerHeight ), mUiInspector, mUiTimeline );
     mUiObjectExplorer->setPosition( ci::Vec2i( 5, 25 ) );
 }
 void CinderGwenApp::privateUpdateUi__()
