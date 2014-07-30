@@ -5,7 +5,7 @@ https://github.com/richardeakin/Cinder-Gwen
 ##This is an archive! 
 
 
-Archive of Paleodyction Gwen wrapper for cinder.
+Archive of Paleodyction Gwen wrapper for cinder. The code was written in a rush and is tied to the main app.
 ![alt text](http://blog.antivj.com/wp-content/uploads/2013/03/FromStoryboardToSoftware.png "Title")
 
 http://www.simongeilfus.com/portfolio-item/paleodictyon-centre-pompidou-metz/
